@@ -31,6 +31,8 @@ async function start(db) {
           console.log('Message was sent without problems.')
         })
         .catch(console.error)
+
+      // one notification in channel is enough :)
       task.stop()
     }
     bestBlock = dbBestBlock
