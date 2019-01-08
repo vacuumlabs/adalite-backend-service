@@ -1,11 +1,11 @@
 // @flow
 
+import cron from 'node-cron'
+import { RTMClient } from '@slack/client'
 import config from 'config'
 import dbApi from './db-api'
 import type { DbApi } from 'icarus-backend'; // eslint-disable-line
 
-const cron = require('node-cron')
-const { RTMClient } = require('@slack/client')
 
 async function fetchBestBlock(db) {
   return dbApi(db).bestBlock()
