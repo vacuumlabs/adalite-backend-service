@@ -14,7 +14,7 @@ import manageConnections from './ws-connections'
 import createDB from './db'
 import configCleanup from './cleanup'
 import apiKeyAuth from './middleware/api-key-auth'
-import healthCheck from '../scripts/healthcheck'
+import healthCheck from './healthcheck'
 
 const serverConfig = config.get('server')
 const { logger, importerSendTxEndpoint } = serverConfig
@@ -27,8 +27,7 @@ async function createServer() {
     log: logger,
     maxParamLength: 1000, // default is 100 (too short for Daedalus addresses)
   })
-  healthCheck()
-
+  healthCheck(db)
   const cors = corsMiddleware({ origins: serverConfig.corsEnabledFor })
   server.pre(cors.preflight)
   server.use(cors.actual)

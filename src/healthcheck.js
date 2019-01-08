@@ -1,24 +1,26 @@
 // @flow
+
 import config from 'config'
+import dbApi from './db-api'
 import type { DbApi } from 'icarus-backend'; // eslint-disable-line
 
 const cron = require('node-cron')
 const { RTMClient } = require('@slack/client')
 
-async function fetchBestBlock(dbApi: DbApi) {
-  return dbApi.bestBlock()
+async function fetchBestBlock(db) {
+  return dbApi(db).bestBlock()
 }
 
-async function start() {
+async function start(db) {
   const { token, channelId } = config.get('slack')
   const rtm = new RTMClient(token)
   rtm.start()
 
-  let bestBlock = fetchBestBlock()
+  let bestBlock = await fetchBestBlock(db)
 
   // running a task every 20 minutes
-  cron.schedule('20 * * * *', () => {
-    const dbBestBlock = fetchBestBlock()
+  cron.schedule('*/20 * * * *', async () => {
+    const dbBestBlock = await fetchBestBlock(db)
     if (bestBlock === dbBestBlock) {
       console.log('Database did not update!')
 

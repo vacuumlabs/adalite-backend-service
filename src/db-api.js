@@ -116,7 +116,7 @@ const lastTxs = (db: Pool) => async (): Promise<ResultSet> =>
 
 const bestBlock = (db: Pool) => async (): Promise<ResultSet> => {
   const query = await db.query('SELECT * FROM "bestblock"')
-  return query.rows[0].best_block_numA
+  return query.rows[0].best_block_num
 }
 
 export default (db: Pool): DbApi => ({
