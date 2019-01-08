@@ -24,11 +24,11 @@ async function start(db) {
     if (bestBlock === dbBestBlock) {
       console.log('Database did not update!')
 
-      // MAGICAL RAFA'S COMMANDS TO SWITCH SERVER ENV?
+      // RAFA'S MAGICAL COMMANDS TO SWITCH SERVER ENV?
 
       rtm.sendMessage('Database did not update!', channelId)
         .then(() => {
-          console.log('Message sent without problems')
+          console.log('Message was sent without problems.')
         })
         .catch(console.error)
     }
