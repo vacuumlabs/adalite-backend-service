@@ -19,7 +19,7 @@ async function start(db) {
   let bestBlock = await fetchBestBlock(db)
 
   // running a task every 20 minutes
-  cron.schedule('*/20 * * * *', async () => {
+  const task = cron.schedule('*/20 * * * *', async () => {
     const dbBestBlock = await fetchBestBlock(db)
     if (bestBlock === dbBestBlock) {
       console.log('Database did not update!')
@@ -31,9 +31,13 @@ async function start(db) {
           console.log('Message was sent without problems.')
         })
         .catch(console.error)
+      task.stop()
     }
     bestBlock = dbBestBlock
+  }, {
+    scheduled: false,
   })
+  task.start()
 }
 
 export default start
