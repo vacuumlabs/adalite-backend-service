@@ -1,11 +1,12 @@
 // @flow
 
-import cron from 'node-cron'
+import delay from 'delay'
 import { RTMClient } from '@slack/client'
 import config from 'config'
 import dbApi from './db-api'
 import type { DbApi } from 'icarus-backend'; // eslint-disable-line
 
+const { logger } = config.get('server')
 
 async function fetchBestBlock(db) {
   return dbApi(db).bestBlock()
@@ -18,13 +19,11 @@ async function start(db) {
 
   let bestBlock = await fetchBestBlock(db)
 
-  // running a task every 20 minutes
-  const task = cron.schedule('*/20 * * * *', async () => {
-    const dbBestBlock = await fetchBestBlock(db)
+  while (true) {
+    await delay(30000) // eslint-disable-line
+    const dbBestBlock = await fetchBestBlock(db) // eslint-disable-line
     if (bestBlock === dbBestBlock) {
-      console.log('Database did not update!')
-
-      // RAFA'S MAGICAL COMMANDS TO SWITCH SERVER ENV?
+      logger.info('Database did not update!')
 
       rtm.sendMessage('Database did not update!', channelId)
         .then(() => {
@@ -33,13 +32,10 @@ async function start(db) {
         .catch(console.error)
 
       // one notification in channel is enough :)
-      task.stop()
+      break
     }
     bestBlock = dbBestBlock
-  }, {
-    scheduled: false,
-  })
-  task.start()
+  }
 }
 
 export default start
