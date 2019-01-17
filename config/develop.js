@@ -18,8 +18,4 @@ module.exports = {
     idleTimeoutMillis: 1000,
     connectionTimeoutMillis: 5000,
   },
-  slack: {
-    token: '',
-    channelId: '',
-  }
 }

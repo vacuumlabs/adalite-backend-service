@@ -13,27 +13,43 @@ async function fetchBestBlock(db) {
 }
 
 async function start(db) {
-  const { token, channelId } = config.get('slack')
+  console.log('start')
+  const token = process.env.SLACK_TOKEN
+  const channelId = process.env.SLACK_CHANNEL
+  process.env.BLOCK_RESPONSE = 'true'
+  let responding = true
   const rtm = new RTMClient(token)
   rtm.start()
 
   let bestBlock = await fetchBestBlock(db)
 
-  while (true) {
-    await delay(30000) // eslint-disable-line
+  const slackMessage = {
+    true: 'Database is updating again.',
+    false: 'Database did not update!',
+  }
+
+  while (true) { // eslint-disable-line
+    await delay(70000) // eslint-disable-line
     const dbBestBlock = await fetchBestBlock(db) // eslint-disable-line
-    if (bestBlock === dbBestBlock) {
-      logger.info('Database did not update!')
+    const changed = !(bestBlock === dbBestBlock)
 
-      rtm.sendMessage('Database did not update!', channelId)
+    if (responding !== changed) {
+      /*
+        If the block did not change, it is guaranteed that the database does not contain the
+        latest data. However, it is possible that the database does not contain the latest data
+        even if the block did change, for example in the case when the database is synchronising
+        with the blockchain.
+      */
+      responding = changed
+      process.env.BLOCK_RESPONSE = responding.toString()
+      logger.info(slackMessage[changed])
+      rtm.sendMessage(slackMessage[changed], channelId)
         .then(() => {
-          console.log('Message was sent without problems.')
+          console.log('Message was sent without problems.') // eslint-disable-line
         })
-        .catch(console.error)
-
-      // one notification in channel is enough :)
-      break
+        .catch(console.error) // eslint-disable-line
     }
+
     bestBlock = dbBestBlock
   }
 }
