@@ -13,7 +13,7 @@ async function fetchBestBlock(db) {
 }
 
 async function start(db) {
-  console.log('start')
+  console.log('start') // eslint-disable-line
   const token = process.env.SLACK_TOKEN
   const channelId = process.env.SLACK_CHANNEL
   process.env.BLOCK_RESPONSE = 'true'
