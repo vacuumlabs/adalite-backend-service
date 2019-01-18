@@ -12,21 +12,16 @@ async function fetchBestBlock(db) {
   return dbApi(db).bestBlock()
 }
 
-async function start(db) {
+async function start(db: any) {
   console.log('start') // eslint-disable-line
   const token = process.env.SLACK_TOKEN
   const channelId = process.env.SLACK_CHANNEL
   process.env.BLOCK_RESPONSE = 'true'
-  let responding = true
   const rtm = new RTMClient(token)
   rtm.start()
 
+  let responding = true
   let bestBlock = await fetchBestBlock(db)
-
-  const slackMessage = {
-    true: 'Database is updating again.',
-    false: 'Database did not update!',
-  }
 
   while (true) { // eslint-disable-line
     await delay(70000) // eslint-disable-line
@@ -42,8 +37,9 @@ async function start(db) {
       */
       responding = changed
       process.env.BLOCK_RESPONSE = responding.toString()
-      logger.info(slackMessage[changed])
-      rtm.sendMessage(slackMessage[changed], channelId)
+      const message = changed ? 'Database is updating again.' : 'Database did not update!'
+      logger.info(message)
+      rtm.sendMessage(message, channelId)
         .then(() => {
           console.log('Message was sent without problems.') // eslint-disable-line
         })
