@@ -27,6 +27,7 @@ async function start(db: any) {
   while (true) { // eslint-disable-line
     await delay(70000) // eslint-disable-line
     const currentBestBlock = await fetchBestBlock(db) // eslint-disable-line
+    // compare block number to the expected value based on the official blockchain explorer data
     let behind = false
     axios.get('https://cardanoexplorer.com/api/blocks/pages')
       .then(response => {
@@ -38,6 +39,7 @@ async function start(db: any) {
       .catch(error => {
         logger.debug(error)
       })
+    // the database is considered up to date if the block number changed and is not too far behind
     const upToDate = !(prevBestBlock === currentBestBlock) && !behind
 
     if (healthy !== upToDate) {
