@@ -22,23 +22,23 @@ async function start(db: any) {
   rtm.start()
 
   let healthy = true
-  let bestBlock = await fetchBestBlock(db)
+  let prevBestBlock = await fetchBestBlock(db)
 
   while (true) { // eslint-disable-line
     await delay(70000) // eslint-disable-line
-    const dbBestBlock = await fetchBestBlock(db) // eslint-disable-line
+    const currentBestBlock = await fetchBestBlock(db) // eslint-disable-line
     let behind = false
     axios.get('https://cardanoexplorer.com/api/blocks/pages')
       .then(response => {
         const pages = response.data.Right[0]
         const items = response.data.Right[1].length
         const explorerBlock = ((pages - 1) * 10) + items
-        behind = (explorerBlock - dbBestBlock > 3)
+        behind = (explorerBlock - currentBestBlock > 3)
       })
       .catch(error => {
         logger.debug(error)
       })
-    const upToDate = !(bestBlock === dbBestBlock) && !behind
+    const upToDate = !(prevBestBlock === currentBestBlock) && !behind
 
     if (healthy !== upToDate) {
       process.env.DATABASE_UNHEALTHY = healthy.toString()
@@ -51,7 +51,7 @@ async function start(db: any) {
         })
     }
 
-    bestBlock = dbBestBlock
+    prevBestBlock = currentBestBlock
   }
 }
 
