@@ -1,8 +1,8 @@
 // @flow
 import errors from 'restify-errors'
 
-function checkDatabase(req: any, res: any, next: any) {
-  if (process.env.BLOCK_RESPONSE !== 'true') {
+function responseGuard(req: any, res: any, next: any) {
+  if (process.env.DATABASE_UNHEALTHY === 'true') {
     const error = new errors.InternalError(
       'The database is not synchronised with the blockchain.')
     return next(error)
@@ -10,4 +10,4 @@ function checkDatabase(req: any, res: any, next: any) {
   return next()
 }
 
-export default checkDatabase
+export default responseGuard

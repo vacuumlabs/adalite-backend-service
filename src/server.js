@@ -15,7 +15,7 @@ import createDB from './db'
 import configCleanup from './cleanup'
 import apiKeyAuth from './middleware/api-key-auth'
 import healthCheck from './healthcheck'
-import checkDatabase from './middleware/healthcheck-middleware'
+import responseGuard from './middleware/response-guard'
 
 const serverConfig = config.get('server')
 const { logger, importerSendTxEndpoint } = serverConfig
@@ -35,7 +35,7 @@ async function createServer() {
   server.pre(cors.preflight)
   server.use(cors.actual)
   server.use(restify.plugins.bodyParser())
-  server.use(checkDatabase)
+  server.use(responseGuard)
   server.use(apiKeyAuth)
   server.use(restify.plugins.throttle({
     burst: 50,

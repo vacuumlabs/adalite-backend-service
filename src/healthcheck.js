@@ -13,10 +13,10 @@ async function fetchBestBlock(db) {
 }
 
 async function start(db: any) {
-  console.log('start') // eslint-disable-line
+  logger.debug('start')
   const token = process.env.SLACK_TOKEN
   const channelId = process.env.SLACK_CHANNEL
-  process.env.BLOCK_RESPONSE = 'true'
+  process.env.DATABASE_UNHEALTHY = 'false'
   const rtm = new RTMClient(token)
   rtm.start()
 
@@ -29,21 +29,15 @@ async function start(db: any) {
     const changed = !(bestBlock === dbBestBlock)
 
     if (responding !== changed) {
-      /*
-        If the block did not change, it is guaranteed that the database does not contain the
-        latest data. However, it is possible that the database does not contain the latest data
-        even if the block did change, for example in the case when the database is synchronising
-        with the blockchain.
-      */
+      // TODO: block number from the official explorer
+      process.env.DATABASE_UNHEALTHY = responding.toString()
       responding = changed
-      process.env.BLOCK_RESPONSE = responding.toString()
       const message = changed ? 'Database is updating again.' : 'Database did not update!'
       logger.info(message)
       rtm.sendMessage(message, channelId)
         .then(() => {
-          console.log('Message was sent without problems.') // eslint-disable-line
+          logger.debug('Message was sent without problems.')
         })
-        .catch(console.error) // eslint-disable-line
     }
 
     bestBlock = dbBestBlock
