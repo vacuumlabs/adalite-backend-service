@@ -9,7 +9,7 @@ import type { DbApi } from 'icarus-backend'; // eslint-disable-line
 
 const { logger } = config.get('server')
 
-async function fetchBestBlock(db) {
+function fetchBestBlock(db): Promise<any> {
   return dbApi(db).bestBlock()
 }
 
