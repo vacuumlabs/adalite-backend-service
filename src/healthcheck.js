@@ -22,10 +22,9 @@ async function start(db: any) {
   rtm.start()
 
   let healthy = true
-  let prevBestBlock = await fetchBestBlock(db)
+  let prevBestBlock = 0
 
   while (true) { // eslint-disable-line
-    await delay(70000) // eslint-disable-line
     const currentBestBlock = await fetchBestBlock(db) // eslint-disable-line
     // compare block number to the expected value based on the official blockchain explorer data
     let behind = false
@@ -47,13 +46,14 @@ async function start(db: any) {
       healthy = upToDate
       const message = upToDate ? 'Database is updating again.' : 'Database did not update!'
       logger.info(message)
-      rtm.sendMessage(message, channelId)
+      rtm.sendMessage(`${process.env.name}: ${message}`, channelId)
         .then(() => {
           logger.debug('Message was sent without problems.')
         })
     }
 
     prevBestBlock = currentBestBlock
+    await delay(70000) // eslint-disable-line
   }
 }
 
