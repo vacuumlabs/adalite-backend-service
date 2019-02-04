@@ -3,25 +3,28 @@ services:
   adalite-backend:
     build: .
     ports:
-      - "8080:8080"
+      - "${BACKEND_SERVICE_PORT}:8080"
     depends_on:
       - icarus-importer
-    container_name: adalite-backend
+    container_name: ${BACKEND_CONTAINER_NAME}
+    environment:
+      DB: ${DB}
+      name: ${BACKEND_CONTAINER_NAME}
   icarus-importer:
     image: cardano-container-mainnet
     volumes:
-      - /home/ubuntu/docker_data/icarus_mainnet_1:/wallet/mainnet
+      - ${IMPORTER_DATA_PATH}:/wallet/mainnet
     depends_on:
       - postgres
-    container_name: icarus-importer
-    command: wait-for-it.sh postgres:5432 -t 3600 -- cardano-start -- --runtime-args "--postgres-name icarus_mainnet_1 --postgres-user ${POSTGRES_USER} --postgres-password ${POSTGRES_PASSWORD} --postgres-host ${DB_HOST} --postgres-port 5432 --no-tls"
+    container_name: ${IMPORTER_CONTAINER_NAME}
+    command: wait-for-it.sh postgres:5432 -t 3600 -- cardano-start -- --runtime-args "--postgres-name ${DB} --postgres-user ${POSTGRES_USER} --postgres-password ${POSTGRES_PASSWORD} --postgres-host postgres --postgres-port 5432 --no-tls"
   postgres:
     image: postgres
     ports:
-      - "5431:5432"
+      - "${DB_PORT}:5432"
     volumes:
-      - /home/ubuntu/docker_data/postgres:/var/lib/postgresql/data
+      - ${DB_DATA_PATH}:/var/lib/postgresql/data
     environment:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_USER: ${POSTGRES_USER}
-    container_name: postgres
+    container_name: ${DB_CONTAINER_NAME}
