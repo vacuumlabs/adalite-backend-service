@@ -9,4 +9,4 @@ WORKDIR /usr/app
 
 EXPOSE 8080
 
-CMD ["yarn", "start"]
+CMD ["/bin/sh", "-c", "yarn knex migrate:latest && yarn start >> server.log 2>&1"]
