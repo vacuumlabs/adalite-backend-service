@@ -169,6 +169,32 @@ const lastTxs = (dbApi: any, { logger }: ServerConfig) => async () => {
   return { Right: right }
 }
 
+/**
+ * This endpoint returns the list of addresses, the number of their transactions and the list of
+ * transactions.
+ * @param {*} db Database
+ * @param {*} Server Server Config Object
+ */
+const bulkAddressSummary = (dbApi: any, { logger, apiConfig }: ServerConfig) => async (req: any,
+) => {
+  const addresses = req.body
+  const limit = apiConfig.addressesRequestLimit
+  if (!addresses || addresses.length === 0 || addresses.length > limit) {
+    return { Left: `Addresses request length should be (0, ${limit}]` }
+  }
+  if (addresses.some((addr) => !isValidAddress(addr))) {
+    return { Left: invalidAddress }
+  }
+  const txList = await dbApi.bulkAddressSummary(addresses)
+  const right = {
+    caAddresses: addresses,
+    caTxNum: txList.rows.length,
+    caTxList: txList.rows.map(txToAddressInfo),
+  }
+  logger.debug('[bulkAddressSummary] result calculated')
+  return { Right: right }
+}
+
 export default {
   addressSummary: {
     method: 'get',
@@ -194,5 +220,10 @@ export default {
     method: 'get',
     path: withPrefix('/txs/last'),
     handler: lastTxs,
+  },
+  bulkAddressSummary: {
+    method: 'post',
+    path: withPrefix('/bulk/addresses/summary'),
+    handler: bulkAddressSummary,
   },
 }

@@ -80,6 +80,20 @@ const addressSummary = (db: Pool) => async (address: string): Promise<ResultSet>
   })
 
 /**
+ * Queries DB looking for successful transactions associated with any of the given addresses.
+ * @param {Db Object} db
+ * @param {Array<Address>} addresses
+ */
+const bulkAddressSummary = (db: Pool) => async (addresses: Array<string>): Promise<ResultSet> =>
+  db.query({
+    text: `SELECT * FROM "txs"
+      WHERE hash = ANY (SELECT tx_hash FROM "tx_addresses" WHERE address = ANY($1))
+      AND tx_state = $2
+      ORDER BY time DESC`,
+    values: [addresses, 'Successful'],
+  })
+
+/**
 * Queries TXS table looking for a successful transaction with a given hash
 * @param {Db Object} db
 * @param {*} tx
@@ -128,6 +142,7 @@ export default (db: Pool): DbApi => ({
   bestBlock: bestBlock(db),
   // legacy
   addressSummary: addressSummary(db),
+  bulkAddressSummary: bulkAddressSummary(db),
   txSummary: txSummary(db),
   utxoLegacy: utxoLegacy(db),
   lastTxs: lastTxs(db),
