@@ -43,7 +43,7 @@ const addressSummary = (dbApi: any, { logger }: ServerConfig) => async (req: any
   if (!isValidAddress(address)) {
     return { Left: invalidAddress }
   }
-  const result = await dbApi.addressSummary(address)
+  const result = await dbApi.bulkAddressSummary([address])
   const transactions = result.rows
   const totalAddressIn = transactions.reduce((acc, tx) =>
     acc.plus(txAddressCoins(tx.outputs_address, tx.outputs_amount, address)), Big(0))
