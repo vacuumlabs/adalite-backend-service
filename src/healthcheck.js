@@ -15,9 +15,13 @@ function fetchBestBlock(db): Promise<any> {
 
 async function start(db: any) {
   logger.debug('start')
+
+  process.env.DATABASE_UNHEALTHY = 'false'
+  process.env.DATABASE_UNHEALTHY_SINCE = undefined
+  process.env.DATABASE_UNHEALTHY_LIMIT = 10000
+
   const token = process.env.SLACK_TOKEN
   const channelId = process.env.SLACK_CHANNEL
-  process.env.DATABASE_UNHEALTHY = 'false'
   const rtm = new RTMClient(token)
   if (token) {
     rtm.start()
@@ -45,7 +49,10 @@ async function start(db: any) {
 
     if (healthy !== upToDate) {
       process.env.DATABASE_UNHEALTHY = healthy.toString()
+
       healthy = upToDate
+      process.env.DATABASE_UNHEALTHY_SINCE = healthy ? undefined : new Date().getTime()
+
       const message = upToDate ? 'Database is updating again.' : 'Database did not update!'
       logger.info(message)
       rtm.sendMessage(`${process.env.name || 'backend-service'}: ${message}`, channelId)
