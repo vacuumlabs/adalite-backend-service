@@ -2,16 +2,13 @@
 import errors from 'restify-errors'
 
 function responseGuard(req: any, res: any, next: any) {
-  const {
-    DATABASE_UNHEALTHY,
-    DATABASE_UNHEALTHY_SINCE,
-    DATABASE_UNHEALTHY_LIMIT,
-  } = process.env
+  const { DATABASE_UNHEALTHY_SINCE } = process.env
   const currentTimeStamp = new Date().getTime()
+  const unhealthyLimit = 10000
 
   if (
-    (DATABASE_UNHEALTHY === 'true') &&
-    ((currentTimeStamp - parseInt(DATABASE_UNHEALTHY_SINCE, 10)) > DATABASE_UNHEALTHY_LIMIT)
+    !!DATABASE_UNHEALTHY_SINCE &&
+    ((currentTimeStamp - parseInt(DATABASE_UNHEALTHY_SINCE, 10)) > unhealthyLimit)
   ) {
     const error = new errors.InternalError(
       'The database is not synchronised with the blockchain.')

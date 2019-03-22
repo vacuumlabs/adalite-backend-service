@@ -179,9 +179,9 @@ const signedTransaction = (
  * @param {*} next
  */
 const healthCheck = () => () => {
-  const healthy = process.env.DATABASE_UNHEALTHY === 'false'
+  const healthy = !process.env.DATABASE_UNHEALTHY_SINCE
   return healthy
-    ? Promise.resolve({ version }) 
+    ? Promise.resolve({ version })
     : new InternalError('The database is not synchronised with the blockchain.')
 }
 
