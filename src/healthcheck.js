@@ -6,6 +6,7 @@ import config from 'config'
 import dbApi from './db-api'
 import importerApi from './importer-api'
 import type { DbApi } from 'icarus-backend'; // eslint-disable-line
+import axios from 'axios'
 
 const { logger, importerSendTxEndpoint } = config.get('server')
 const importer = importerApi(importerSendTxEndpoint)
@@ -38,19 +39,31 @@ async function healthcheck(db: any) {
 
   global.instanceUnhealthyFrom = null
 
-  while (true) { // eslint-disable-line
-    const token = process.env.SLACK_TOKEN
-    const channelId = process.env.SLACK_CHANNEL
-    const rtm = new RTMClient(token)
-    if (token) {
-      rtm.start()
-    }
+  const token = process.env.SLACK_TOKEN
+  const channelId = process.env.SLACK_CHANNEL
+  const rtm = new RTMClient(token)
+  if (token) {
+    rtm.start()
+  }
 
+  while (true) { // eslint-disable-line
     const currentBestBlock = await fetchBestBlock(db) // eslint-disable-line
     // compare block number to the expected value based on historical data
-    const currentTime = Math.floor((new Date().getTime()) / 1000)
-    const expectedBlock = 2761803 + Math.floor((currentTime - 1561469711) / 20)
-    const isDbSynced = (expectedBlock - currentBestBlock <= 3)
+    //const currentTime = Math.floor((new Date().getTime()) / 1000)
+    //const expectedBlock = 2761803 + Math.floor((currentTime - 1561469711) / 20)
+   
+    const expectedBlock = await axios.get('https://cardanoexplorer.com/api/blocks/pages') // eslint-disable-line
+      .then(response => {
+        const pages = response.data.Right[0]
+        const items = response.data.Right[1].length
+        return ((pages - 1) * 10) + items
+      })
+      .catch(error => {
+        logger.debug(error)
+        return 0
+      })
+
+    const isDbSynced = (expectedBlock - currentBestBlock <= 5)
 
     // eslint-disable-next-line no-await-in-loop
     const canSubmitTx = await txTest()
