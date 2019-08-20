@@ -22,13 +22,7 @@ const {
 } = serverConfig
 
 async function createServer() {
-  let db
-  try {
-    db = await createDB(config.get('db'))
-  } catch (err) {
-    logger.error(`Failed to connect to db: ${err}`)
-    throw err
-  }
+  const db = await createDB(config.get('db'))
   logger.info('Connected to db')
 
   const server = restify.createServer({
@@ -37,7 +31,10 @@ async function createServer() {
   })
 
   if (!disableHealthcheck) {
-    healthCheck(db)
+    healthCheck(db).catch((err) => {
+      logger.error(err)
+      process.exit(1)
+    })
   }
 
   const allowedOrigins = corsEnabledFor ? corsEnabledFor.split(',').map(x => x.trim()) : []
