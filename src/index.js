@@ -1,6 +1,6 @@
+import 'source-map-support/register'
 import '@babel/polyfill'
-import config from 'config'
-import './config'
+import config from './config'
 import server from './server'
 
 const serverConfig = config.get('server')

@@ -5,7 +5,7 @@ import { Server as WebSocketServer } from 'ws'
 import corsMiddleware from 'restify-cors-middleware'
 import restifyBunyanLogger from 'restify-bunyan-logger'
 import restify from 'restify'
-import config from 'config'
+import config from './config'
 import routes from './routes'
 import legacyRoutes from './legacy-routes'
 import importerApi from './importer-api'
@@ -13,7 +13,7 @@ import dbApi from './db-api'
 import manageConnections from './ws-connections'
 import createDB from './db'
 import configCleanup from './cleanup'
-import healthCheck from './healthcheck'
+import { healthcheckLoop } from './healthcheck'
 import responseGuard from './middleware/response-guard'
 
 const serverConfig = config.get('server')
@@ -31,7 +31,7 @@ async function createServer() {
   })
 
   if (!disableHealthcheck) {
-    healthCheck(db).catch((err) => {
+    healthcheckLoop(db).catch((err) => {
       logger.error(err)
       process.exit(1)
     })

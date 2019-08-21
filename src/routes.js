@@ -13,6 +13,7 @@ import type {
 import { InternalError, InvalidContentError, InternalServerError } from 'restify-errors'
 import moment from 'moment'
 import { version } from '../package.json'
+import { getInstanceHealthStatus } from './healthcheck'
 
 const withPrefix = route => `/api/v2${route}`
 
@@ -189,13 +190,19 @@ const bestBlock = (dbApi: DbApi) => async () => {
  * @param {*} res
  * @param {*} next
  */
-const healthCheck = () => () => Promise.resolve({ version })
+const healthcheck = () => () => Promise.resolve({ version })
+const getHealthStatus = () => () => Promise.resolve(getInstanceHealthStatus())
 
 export default {
-  healthCheck: {
+  healthcheck: {
     method: 'get',
     path: withPrefix('/healthcheck'),
-    handler: healthCheck,
+    handler: healthcheck,
+  },
+  healthStatus: {
+    method: 'get',
+    path: withPrefix('/healthStatus'),
+    handler: getHealthStatus,
   },
   bestBlock: {
     method: 'get',

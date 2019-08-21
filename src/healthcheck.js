@@ -3,7 +3,7 @@
 import axios from 'axios'
 import delay from 'delay'
 import { RTMClient } from '@slack/client'
-import config from 'config'
+import config from './config'
 import dbApi from './db-api'
 import importerApi from './importer-api'
 import type { DbApi } from 'icarus-backend' // eslint-disable-line
@@ -11,8 +11,31 @@ import type { DbApi } from 'icarus-backend' // eslint-disable-line
 const { logger, importerSendTxEndpoint } = config.get('server')
 const importer = importerApi(importerSendTxEndpoint)
 
-function fetchBestBlock(db): Promise<number> {
+// TODO refactor to state machine, add tests
+
+let instanceHealthStatus = {
+  healthy: false,
+  unhealthyFrom: 0,
+  dbBestBlock: null,
+  expectedBestBlock: null,
+  canSubmitTx: false,
+}
+
+async function fetchDbBestBlock(db): Promise<number> {
   return dbApi(db).bestBlock()
+}
+
+async function fetchExpectedBestBlock(): Promise<number> {
+  return axios.get('https://cardanoexplorer.com/api/blocks/pages') // eslint-disable-line
+    .then(response => {
+      const pages = response.data.Right[0]
+      const items = response.data.Right[1].length
+      return ((pages - 1) * 10) + items
+    })
+    .catch(error => {
+      logger.debug(error)
+      return 0
+    })
 }
 
 async function txTest(): Promise<boolean> {
@@ -34,10 +57,8 @@ async function txTest(): Promise<boolean> {
   }
 }
 
-async function healthcheck(db: any) {
+export async function healthcheckLoop(db: any) {
   logger.debug('start')
-
-  global.instanceUnhealthyFrom = null
 
   const token = process.env.SLACK_TOKEN
   const channelId = process.env.SLACK_CHANNEL
@@ -47,32 +68,23 @@ async function healthcheck(db: any) {
   }
 
   while (true) { // eslint-disable-line
-    const currentBestBlock = await fetchBestBlock(db) // eslint-disable-line
+    const dbBestBlock = await fetchDbBestBlock(db) // eslint-disable-line
+    const expectedBestBlock = await fetchExpectedBestBlock() // eslint-disable-line
     const currentTime = Math.floor((new Date().getTime()) / 1000)
 
-    const expectedBlock = await axios.get('https://cardanoexplorer.com/api/blocks/pages') // eslint-disable-line
-      .then(response => {
-        const pages = response.data.Right[0]
-        const items = response.data.Right[1].length
-        return ((pages - 1) * 10) + items
-      })
-      .catch(error => {
-        logger.debug(error)
-        return 0
-      })
-
-    const isDbSynced = (expectedBlock - currentBestBlock <= 5)
+    const isDbSynced = (expectedBestBlock - dbBestBlock <= 5)
 
     // eslint-disable-next-line no-await-in-loop
     const canSubmitTx = await txTest()
 
-    const isInstanceHealthy = isDbSynced && canSubmitTx
-    const wasInstanceHealthy = global.instanceUnhealthyFrom === null
+    const isHealthy = isDbSynced && canSubmitTx
+    const { healthy: wasHealthy } = instanceHealthStatus
+    let { unhealthyFrom } = instanceHealthStatus
 
-    if (isInstanceHealthy !== wasInstanceHealthy) {
-      global.instanceUnhealthyFrom = isInstanceHealthy ? null : currentTime
+    if (isHealthy !== wasHealthy) {
+      unhealthyFrom = isHealthy ? null : currentTime
 
-      const message = isInstanceHealthy ? 'Database is updating again.' : 'Database did not update!'
+      const message = isHealthy ? 'Database is updating again.' : 'Database did not update!'
       logger.info(message)
       rtm.sendMessage(`${process.env.name || 'backend-service'}: ${message}`, channelId)
         .then(() => {
@@ -83,8 +95,18 @@ async function healthcheck(db: any) {
         })
     }
 
+    instanceHealthStatus = {
+      healthy: isHealthy,
+      unhealthyFrom,
+      dbBestBlock,
+      expectedBestBlock,
+      canSubmitTx,
+    }
+
     await delay(70000) // eslint-disable-line
   }
 }
 
-export default healthcheck
+export function getInstanceHealthStatus() {
+  return instanceHealthStatus
+}

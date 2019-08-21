@@ -67,11 +67,11 @@ describe('Routes', () => {
 
   describe('Healthcheck', () => {
     it('should have GET as method and /api/v2/healthcheck as path', () => {
-      validateMethodAndPath(routes.healthCheck, 'get', '/api/v2/healthcheck')
+      validateMethodAndPath(routes.healthcheck, 'get', '/api/v2/healthcheck')
     })
 
     it('should return package.json version as response', async () => {
-      const handler = routes.healthCheck.handler()
+      const handler = routes.healthcheck.handler()
       const response = await handler()
       return expect(response).to.eql({ version: packageJson.version })
     })
