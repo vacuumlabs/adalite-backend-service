@@ -25,6 +25,8 @@ services:
       SLACK_CHANNEL: ${SLACK_CHANNEL}
   adalite-importer:
     image: refi93/adalite-importer:latest
+    ports:
+      - "${ADALITE_IMPORTER_HOST_PORT}:8080"
     depends_on:
       - db
       - cardano-http-bridge
