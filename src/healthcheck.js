@@ -47,14 +47,16 @@ async function txTest(): Promise<boolean> {
       signedTx: Buffer.from(txBody, 'hex').toString('base64'),
     }
     response = await importer.sendTx(signedBody)
-    return response.status === 200
   } catch (err) {
-    logger.error('[healthcheck] Unexpected tx submission response:')
-    logger.error(response)
-    logger.error('[healthcheck] Error trying to connect with importer')
-    logger.error(err)
+    if (err.response.status === 400) {
+      return true
+    }
+    logger.error(`[healthcheck] Unexpected tx submission response: ${err}`)
     return false
   }
+
+  logger.error(`[healthcheck] Unexpected tx submission response: ${response}`)
+  return false
 }
 
 export async function healthcheckLoop(db: any) {
