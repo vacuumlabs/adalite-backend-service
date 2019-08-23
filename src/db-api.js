@@ -119,7 +119,25 @@ const lastTxs = (db: Pool) => async (): Promise<ResultSet> =>
 
 const bestBlock = (db: Pool) => async (): Promise<number> => {
   const query = await db.query('SELECT * FROM "bestblock"')
-  return query.rows.length > 0 ? parseInt(query.rows[0].best_block_num, 10) : 0
+  if (query.rows.length === 0) {
+    return 0
+  }
+
+  return parseInt(query.rows[0].best_block_num, 10)
+}
+
+const bestSlotNum = (db: Pool) => async (): Promise<number> => {
+  const query = await db.query(
+    'SELECT epoch, slot FROM blocks ORDER BY block_height DESC limit 1',
+  )
+  if (query.rows.length === 0) {
+    return 0
+  }
+
+  const epoch = parseInt(query.rows[0].epoch, 10)
+  const slot = parseInt(query.rows[0].slot, 10)
+
+  return (epoch * 21600) + slot
 }
 
 export default (db: Pool): DbApi => ({
@@ -129,6 +147,7 @@ export default (db: Pool): DbApi => ({
   utxoSumForAddresses: utxoSumForAddresses(db),
   transactionsHistoryForAddresses: transactionsHistoryForAddresses(db),
   bestBlock: bestBlock(db),
+  bestSlotNum: bestSlotNum(db),
   // legacy
   bulkAddressSummary: bulkAddressSummary(db),
   txSummary: txSummary(db),

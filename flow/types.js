@@ -50,6 +50,7 @@ declare module 'icarus-backend' {
       txHash: ?string,
     ) => Promise<ResultSet>,
     bestBlock: () => Promise<number>,
+    bestSlotNum: () => Promise<number>,
   };
 
   declare type ImporterApi = {

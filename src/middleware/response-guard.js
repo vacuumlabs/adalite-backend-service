@@ -12,10 +12,10 @@ function shouldBlockRequest(req: any): boolean {
     return false
   }
 
-  const instanceHealthStatus = getInstanceHealthStatus()
+  const currentHealthStatus = getInstanceHealthStatus()
 
   if (req.url === '/api/v2/healthcheck') {
-    return !instanceHealthStatus.healthy
+    return !currentHealthStatus.healthy
   } else if (['/api/v2/bestBlock', '/api/v2/healthStatus', '/api/txs/last'].includes(req.url)) {
     // these requests are good to inspect the instance when it becomes unhealthy
     return false
@@ -25,11 +25,11 @@ function shouldBlockRequest(req: any): boolean {
   // to disable the instance without downtime
   const currentTime = Math.floor((new Date().getTime()) / 1000)
 
-  if (instanceHealthStatus.healthy) {
+  if (currentHealthStatus.healthy) {
     return false
   }
 
-  return currentTime - (instanceHealthStatus.unhealthyFrom || 0) >= 50
+  return currentTime - (currentHealthStatus.unhealthyFrom || 0) >= 50
 }
 
 function responseGuard(req: any, res: any, next: any) {
