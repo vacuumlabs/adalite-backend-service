@@ -48,7 +48,7 @@ services:
     environment:
       CARDANO_NETWORK: ${CARDANO_NETWORK}
   db:  
-    image: postgres
+    image: postgres:11.5
     ports:
       - ${DB_HOST_PORT}:5432
     volumes:
