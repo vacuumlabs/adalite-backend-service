@@ -48,7 +48,7 @@ async function txTest(): Promise<boolean> {
     }
     response = await importer.sendTx(signedBody)
   } catch (err) {
-    if (err.response.status === 400) {
+    if (err.response && err.response.status === 400) {
       return true
     }
     logger.error(`[healthcheck] Unexpected tx submission response: ${err}`)
