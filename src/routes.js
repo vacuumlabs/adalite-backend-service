@@ -142,29 +142,14 @@ const signedTransaction = (
   }
   logger.debug('[signedTransaction] transaction sent to backend, response:', response)
   if (response.status === 200) {
-    const parsedBody = response.data
-    if (parsedBody.Right) {
-      // "Right" means 200 ok (success) -> also handle if Right: false (boolean response)
-      return parsedBody.Right
-    } else if (parsedBody.Left) {
-      // "Left" means error case
-      if (parsedBody.Left.includes('witness doesn\'t match address') ||
-        parsedBody.Left.includes('witness doesn\'t pass verification')) {
-        logger.debug('[signedTransaction] Invalid witness')
-        throw new InvalidContentError(
-          'Invalid witness',
-          parsedBody.Left,
-        )
-      }
-      logger.debug('[signedTransaction] Error processing transaction')
-      throw new InvalidContentError(
-        'Error processing transaction',
-        parsedBody.Left,
-      )
+    if (response.data === 'Transaction sent successfully!') {
+      return response.data
     }
+
     logger.debug('[signedTransaction] Unknown response from backend')
-    throw new InternalServerError('Unknown response from backend.', parsedBody)
+    throw new InternalServerError('Unknown response from backend.', response)
   }
+
   logger.error(
     '[signedTransaction] Error while doing request to backend',
     response,
