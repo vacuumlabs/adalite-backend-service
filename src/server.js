@@ -39,7 +39,10 @@ async function createServer() {
 
   const allowedOrigins = corsEnabledFor ? corsEnabledFor.split(',').map(x => x.trim()) : []
   if (allowedOrigins.length > 0) {
-    const cors = corsMiddleware({ origins: corsEnabledFor.split(',').map(x => x.trim()), credentials: allowCredentials })
+    const cors = corsMiddleware({
+      origins: allowedOrigins,
+      credentials: allowCredentials,
+    })
     server.pre(cors.preflight)
     server.use(cors.actual)
   }
