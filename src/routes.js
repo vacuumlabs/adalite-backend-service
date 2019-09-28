@@ -10,7 +10,7 @@ import type {
   ImporterApi,
 } from 'icarus-backend'; // eslint-disable-line
 
-import { InternalError, InvalidContentError, InternalServerError } from 'restify-errors'
+import { InternalError, InternalServerError } from 'restify-errors'
 import moment from 'moment'
 import { version } from '../package.json'
 import { getInstanceHealthStatus } from './healthcheck'
