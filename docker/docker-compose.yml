@@ -1,6 +1,7 @@
 version: '3'
 services:
   adalite-backend:
+    container_name: ${COMPOSE_PROJECT_NAME}-adalite-backend
     build: ..
     depends_on:
       - db
@@ -12,6 +13,7 @@ services:
     volumes:
       - ${DATA_PATH}/adalite-backend:/var/log/app
     environment:
+      name: ${COMPOSE_PROJECT_NAME}-adalite-backend
       NODE_ENV: production
       PORT: 8080
       DB: cardano
@@ -24,6 +26,7 @@ services:
       SLACK_TOKEN: ${SLACK_TOKEN}
       SLACK_CHANNEL: ${SLACK_CHANNEL}
   adalite-importer:
+    container_name: ${COMPOSE_PROJECT_NAME}-adalite-importer
     image: refi93/adalite-importer:latest
     ports:
       - "${ADALITE_IMPORTER_HOST_PORT}:8080"
@@ -40,6 +43,7 @@ services:
       POSTGRES_HOST: db
       POSTGRES_PORT: 5432
   cardano-http-bridge:
+    container_name: ${COMPOSE_PROJECT_NAME}-cardano-http-bridge
     image: refi93/cardano-http-bridge:latest
     ports:
       - "${HTTP_BRIDGE_HOST_PORT}:8082"
@@ -47,7 +51,8 @@ services:
       - ${DATA_PATH}/cardano-http-bridge:/home/docker/data
     environment:
       CARDANO_NETWORK: ${CARDANO_NETWORK}
-  db:  
+  db:
+    container_name: ${COMPOSE_PROJECT_NAME}-db
     image: postgres:11.5
     ports:
       - ${DB_HOST_PORT}:5432
