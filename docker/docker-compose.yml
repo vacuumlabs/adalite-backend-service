@@ -17,7 +17,7 @@ services:
       DB_PASSWORD: ${POSTGRES_PASSWORD}
       DB_USER: postgres
       CORS_ENABLED_FOR: ${CORS_ENABLED_FOR}
-      IMPORTER_ENDPOINT: http://icarus-importer:8200/api/txs/signed
+      IMPORTER_ENDPOINT: http://localhost:8200/api/txs/signed
       SLACK_TOKEN: ${SLACK_TOKEN}
       SLACK_CHANNEL: ${SLACK_CHANNEL}
   icarus-importer:

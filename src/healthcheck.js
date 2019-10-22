@@ -14,7 +14,7 @@ const importer = importerApi(importerSendTxEndpoint)
 // TODO refactor to state machine, add tests
 
 let instanceHealthStatus = {
-  healthy: false,
+  healthy: true,
   unhealthyFrom: 0,
   dbBestBlock: null,
   expectedBestBlock: null,
@@ -49,8 +49,7 @@ async function txTest(): Promise<boolean> {
     response = await importer.sendTx(signedBody)
     return response.status === 200
   } catch (err) {
-    logger.error('[healthcheck] Unexpected tx submission response:')
-    logger.error(response)
+    logger.error('[healthcheck] Unexpected tx submission response: %s', response)
     logger.error('[healthcheck] Error trying to connect with importer')
     logger.error(err)
     return false
@@ -88,10 +87,10 @@ export async function healthcheckLoop(db: any) {
       logger.info(message)
       rtm.sendMessage(`${process.env.name || 'backend-service'}: ${message}`, channelId)
         .then(() => {
-          logger.debug('Message was sent without problems.')
+          logger.info('Message was sent to slack without problems.')
         })
         .catch((e) => {
-          logger.error(`Error sending slack message: ${e}`)
+          logger.error(`Error sending to slack message: ${e}`)
         })
     }
 
