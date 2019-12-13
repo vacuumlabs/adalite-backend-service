@@ -14,6 +14,9 @@ import { InternalError, InternalServerError } from 'restify-errors'
 import moment from 'moment'
 import { version } from '../package.json'
 import { getInstanceHealthStatus } from './healthcheck'
+import axios from 'axios'
+import config from './config'
+const serverConfig = config.get('server')
 
 const withPrefix = route => `/api/v2${route}`
 
@@ -167,6 +170,16 @@ const bestBlock = (dbApi: DbApi) => async () => {
   return { Right: { bestBlock: result } }
 }
 
+const stakePools = ({ logger }: ServerConfig) => async () => {
+  const res = await axios.get(`${serverConfig.jormun}/api/v0/stake_pools`) // eslint-disable-line
+    .then(response => response.data)
+    .catch(error => {
+      logger.debug(error)
+      return []
+    })
+
+  return res
+}
 
 /**
  * This endpoint returns the current deployed version. The goal of this endpoint is to
@@ -218,5 +231,10 @@ export default {
     method: 'post',
     path: withPrefix('/txs/signed'),
     handler: signedTransaction,
+  },
+  stakePools: {
+    method: 'get',
+    path: withPrefix('/stakePools'),
+    handler: stakePools,
   },
 }
