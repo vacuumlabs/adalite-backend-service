@@ -45,7 +45,7 @@ Docker-compose can be used to run postgres, Icarus importer and the backend serv
 In order to start a production instance, you need to:
 
 1. Create a config based on `docker/env.example`, choose an instance name and name it `docker/.env.<instance_name>`
-2. Run the interactive script `./manage_containers.sh <instance_name> <action>` from within the `docker` folder. Available actions are `start-normal` - rebuilds and starts the instance in normal mode, `start-recovery` - rebuilds and starts the instance in recovery mode, `stop` stops the instance
+2. Run the interactive script `./manage_containers.sh <instance_name> <action>` from within the `docker` folder. Available actions are `start` - rebuilds and starts the instance, `stop` stops the instance
 
 If you are running the instance for the first time on Ubuntu, you may run into file permission problems, since the volumes will probably be owned by root. To fix this, cd into the instance persistent storage folder (`$DATA_PATH` environment variable) and run `sudo chown -R 999:999 .` and restart the containers.
 
