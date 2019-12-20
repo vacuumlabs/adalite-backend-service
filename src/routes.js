@@ -10,7 +10,7 @@ import type {
   ImporterApi,
 } from 'icarus-backend'; // eslint-disable-line
 
-import { InternalError, InternalServerError } from 'restify-errors'
+import { InternalServerError, BadRequestError } from 'restify-errors'
 import moment from 'moment'
 import { version } from '../package.json'
 import { getInstanceHealthStatus } from './healthcheck'
@@ -23,7 +23,7 @@ const withPrefix = route => `/api/v2${route}`
  */
 function validateAddressesReq(addressRequestLimit: number, { addresses } = {}) {
   if (!addresses || addresses.length > addressRequestLimit || addresses.length === 0) {
-    throw new Error(`Addresses request length should be (0, ${addressRequestLimit}]`)
+    throw new BadRequestError(`Addresses request length should be (0, ${addressRequestLimit}]`)
   }
   // TODO: Add address validation
   return true
@@ -35,7 +35,7 @@ function validateAddressesReq(addressRequestLimit: number, { addresses } = {}) {
  */
 function validateDatetimeReq({ dateFrom } = {}) {
   if (!dateFrom || !moment(dateFrom).isValid()) {
-    throw new Error('DateFrom should be a valid datetime')
+    throw new BadRequestError('DateFrom should be a valid datetime')
   }
   return true
 }
@@ -47,7 +47,7 @@ function validateDatetimeReq({ dateFrom } = {}) {
  */
 function validateSignedTransactionReq({ signedTx } = {}) {
   if (!signedTx) {
-    throw new Error('Signed transaction missing')
+    throw new BadRequestError('Signed transaction missing')
   }
   // TODO: Add Transaction signature validation or other validations
   return true
@@ -136,25 +136,17 @@ const signedTransaction = (
   let response
   try {
     response = await importerApi.sendTx(req.body)
+    return response.data
   } catch (err) {
-    logger.debug('[signedTransaction] Error trying to connect with importer')
-    throw new InternalError('Error trying to connect with importer', err)
-  }
-  logger.debug('[signedTransaction] transaction sent to backend, response:', response)
-  if (response.status === 200) {
-    if (response.data === 'Transaction sent successfully!') {
-      return response.data
+    if (err.response && err.response.status === 400 && err.response.data) {
+      throw new BadRequestError(err.response.data)
     }
-
-    logger.debug('[signedTransaction] Unknown response from backend')
-    throw new InternalServerError('Unknown response from backend.', response)
+    logger.error(
+      '[signedTransaction] Error while doing request to backend',
+      err,
+    )
+    throw new InternalServerError('Unknown Error: Transaction submission failed')
   }
-
-  logger.error(
-    '[signedTransaction] Error while doing request to backend',
-    response,
-  )
-  throw new Error(`Error trying to send transaction ${response.data}`)
 }
 
 /**

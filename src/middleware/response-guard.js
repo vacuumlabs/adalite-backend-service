@@ -1,5 +1,5 @@
 // @flow
-import errors from 'restify-errors'
+import { InternalServerError } from 'restify-errors'
 import config from '../config'
 import { getInstanceHealthStatus } from '../healthcheck'
 
@@ -34,7 +34,7 @@ function shouldBlockRequest(req: any): boolean {
 
 function responseGuard(req: any, res: any, next: any) {
   if (shouldBlockRequest(req)) {
-    return next(new errors.InternalError(
+    return next(new InternalServerError(
       'The instance is unhealthy',
     ))
   }
