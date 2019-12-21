@@ -13,12 +13,12 @@ import type {
 
 import { InternalError, InternalServerError, BadRequestError } from 'restify-errors'
 import moment from 'moment'
+import axios from 'axios'
 import { version } from '../package.json'
 import { getInstanceHealthStatus } from './healthcheck'
-import axios from 'axios'
 import config from './config'
-const serverConfig = config.get('server')
 
+const serverConfig = config.get('server')
 const withPrefix = route => `/api/v2${route}`
 
 /**
@@ -72,7 +72,7 @@ function validateAccount({ account } = {}) {
  * @param {*} db Database
  * @param {*} Server Server Config Object
  */
-const checkForGroupAddress = (dbApi: DbApi, { logger, apiConfig }: ServerConfig) => async (
+const checkForGroupAddress = (dbApi: DbApi, { logger }: ServerConfig) => async (
   addresses,
 ) => {
   const containsGroupAddress = await dbApi.hasGroupAddress(addresses)
