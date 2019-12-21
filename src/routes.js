@@ -170,6 +170,25 @@ const bestBlock = (dbApi: DbApi) => async () => {
   return { Right: { bestBlock: result } }
 }
 
+/**
+ * Endpoint for getting information for a specific account from node
+ * @param {*} db Database
+ * @param {*} Server Server Config Object
+ */
+const accountInfo = (dbApi: DbApi, { logger }: { logger: Logger }) => async (req: Request) => {
+  const res = await axios.get(`${serverConfig.jormun}/api/v0/account/${req.body.account}`) // eslint-disable-line
+    .then(response => {
+      logger.debug('[accountInfo] request calculated')
+      return response.data
+    })
+    .catch(error => {
+      logger.debug(error)
+      return {}
+    })
+
+  return res
+}
+
 const stakePools = ({ logger }: ServerConfig) => async () => {
   const res = await axios.get(`${serverConfig.jormun}/api/v0/stake_pools`) // eslint-disable-line
     .then(response => response.data)
@@ -177,6 +196,7 @@ const stakePools = ({ logger }: ServerConfig) => async () => {
       logger.debug(error)
       return []
     })
+  console.log(res.length)
 
   return res
 }
@@ -236,5 +256,10 @@ export default {
     method: 'get',
     path: withPrefix('/stakePools'),
     handler: stakePools,
+  },
+  accountInfo: {
+    method: 'post',
+    path: withPrefix('/accountInfo'),
+    handler: accountInfo,
   },
 }
