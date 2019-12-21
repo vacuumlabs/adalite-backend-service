@@ -10,7 +10,7 @@ import type {
   ImporterApi,
 } from 'icarus-backend'; // eslint-disable-line
 
-import { InternalError, InternalServerError } from 'restify-errors'
+import { InternalError, InternalServerError, BadRequestError } from 'restify-errors'
 import moment from 'moment'
 import { version } from '../package.json'
 import { getInstanceHealthStatus } from './healthcheck'
@@ -57,6 +57,21 @@ function validateSignedTransactionReq({ signedTx } = {}) {
 }
 
 /**
+ * Checks for existence of group addresses which should not be explicitly requested
+ * @param {*} db Database
+ * @param {*} Server Server Config Object
+ */
+const checkForGroupAddress = (dbApi: DbApi, { logger, apiConfig }: ServerConfig) => async (
+  addresses,
+) => {
+  const containsGroupAddress = await dbApi.hasGroupAddress(addresses)
+  if (containsGroupAddress) {
+    logger.debug('[checkForGroupAddress] request contains group address - aborting')
+    throw new BadRequestError('Request contains group address')
+  }
+}
+
+/**
  * Endpoint to handle getting UTXOs for given addresses
  * @param {*} db Database
  * @param {*} Server Server Config object
@@ -82,6 +97,7 @@ const filterUsedAddresses = (dbApi: DbApi, { logger, apiConfig }: ServerConfig) 
 ) => {
   validateAddressesReq(apiConfig.addressesRequestLimit, req.body)
   logger.debug('[filterUsedAddresses] request is valid')
+  await checkForGroupAddress(dbApi, serverConfig)(req.body.addresses)
   const result = await dbApi.filterUsedAddresses(req.body.addresses)
   logger.debug('[filterUsedAddresses] result calculated')
   return result.rows.reduce((acc, row) => acc.concat(row), [])

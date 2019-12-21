@@ -4,6 +4,22 @@ import type { Pool, ResultSet } from 'pg'
 import type { DbApi } from 'icarus-backend'; // eslint-disable-line
 
 /**
+ * Checks if addresses array contains group address
+ * @param {Db Object} db
+ * @param {Array<Address>} addresses
+ */
+const hasGroupAddress = (db: Pool) => async (
+  addresses: Array<string>,
+): Promise<Boolean> => {
+  const res = await db.query({
+    text: 'SELECT EXISTS ( SELECT 1 FROM group_addresses WHERE group_address = ANY($1) )',
+    values: [addresses],
+    rowMode: 'array',
+  })
+  return res.rows[0][0]
+}
+
+/**
  * Returns the list of addresses that were used at least once (as input or output)
  * @param {Db Object} db
  * @param {Array<Address>} addresses
@@ -12,7 +28,12 @@ const filterUsedAddresses = (db: Pool) => async (
   addresses: Array<string>,
 ): Promise<ResultSet> =>
   db.query({
-    text: 'SELECT DISTINCT address FROM "tx_addresses" WHERE address = ANY($1)',
+    text: `SELECT DISTINCT address FROM "tx_addresses"
+           WHERE address = ANY($1)
+              OR address in (
+                SELECT group_address from group_addresses
+                WHERE utxo_address = ANY($1)
+              )`,
     values: [addresses],
     rowMode: 'array',
   })
@@ -123,6 +144,7 @@ const bestBlock = (db: Pool) => async (): Promise<number> => {
 }
 
 export default (db: Pool): DbApi => ({
+  hasGroupAddress: hasGroupAddress(db),
   filterUsedAddresses: filterUsedAddresses(db),
   unspentAddresses: unspentAddresses(db),
   utxoForAddresses: utxoForAddresses(db),
