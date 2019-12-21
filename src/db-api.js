@@ -67,7 +67,11 @@ const txHistoryQuery = (limit: number) => `
     hash = ANY (
       SELECT tx_hash 
       FROM "tx_addresses"
-      where address = ANY ($1)
+      WHERE address = ANY ($1)
+      OR address in (
+        SELECT group_address from group_addresses
+        WHERE utxo_address = ANY($1)
+      )
     )
     AND last_update >= $2
   ORDER BY last_update ASC
