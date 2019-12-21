@@ -19,6 +19,28 @@ const hasGroupAddress = (db: Pool) => async (
   return res.rows[0][0]
 }
 
+// NULL value in column POOL means undelegation
+const delegationHistoryQuery = (limit: number) => `
+  SELECT * FROM delegation_certificates
+  WHERE account = $1 
+    AND pool IS NOT NULL
+  ORDER BY block_num DESC LIMIT ${limit}
+`
+
+/**
+ * Returns delegation history for an account
+ * @param {Db Object} db
+ * @param {Account} account
+ */
+const delegationHistoryForAccount = (db: Pool) => async (
+  limit: number,
+  account: string,
+): Promise<ResultSet> =>
+  db.query({
+    text: delegationHistoryQuery(limit),
+    values: [account],
+  })
+
 /**
  * Returns the list of addresses that were used at least once (as input or output)
  * @param {Db Object} db
@@ -149,6 +171,7 @@ const bestBlock = (db: Pool) => async (): Promise<number> => {
 
 export default (db: Pool): DbApi => ({
   hasGroupAddress: hasGroupAddress(db),
+  delegationHistoryForAccount: delegationHistoryForAccount(db),
   filterUsedAddresses: filterUsedAddresses(db),
   unspentAddresses: unspentAddresses(db),
   utxoForAddresses: utxoForAddresses(db),

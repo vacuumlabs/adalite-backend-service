@@ -4,6 +4,7 @@ import type { Logger } from 'bunyan'
 import type {
   ServerConfig,
   Request,
+  AccountRequest,
   TxHistoryRequest,
   SignedTxRequest,
   DbApi,
@@ -54,6 +55,16 @@ function validateSignedTransactionReq({ signedTx } = {}) {
   }
   // TODO: Add Transaction signature validation or other validations
   return true
+}
+
+/**
+ * Function to ensure account request is not empty
+ * @param {Account} account
+ */
+function validateAccount({ account } = {}) {
+  if (!account) {
+    throw new Error('Account is empty.')
+  }
 }
 
 /**
@@ -191,7 +202,10 @@ const bestBlock = (dbApi: DbApi) => async () => {
  * @param {*} db Database
  * @param {*} Server Server Config Object
  */
-const accountInfo = (dbApi: DbApi, { logger }: { logger: Logger }) => async (req: Request) => {
+const accountInfo = (
+  dbApi: DbApi, { logger }: { logger: Logger },
+) => async (req: AccountRequest) => {
+  validateAccount(req.body)
   const res = await axios.get(`${serverConfig.jormun}/api/v0/account/${req.body.account}`) // eslint-disable-line
     .then(response => {
       logger.debug('[accountInfo] request calculated')
@@ -212,9 +226,26 @@ const stakePools = ({ logger }: ServerConfig) => async () => {
       logger.debug(error)
       return []
     })
-  console.log(res.length)
 
   return res
+}
+
+/**
+ *
+ * @param {*} db Database
+ * @param {*} Server Config Object
+ */
+const delegationHistory = (dbApi: DbApi, { logger, apiConfig }: ServerConfig) => async (
+  req: AccountRequest,
+) => {
+  validateAccount(req.body)
+  logger.debug('[delegationHistory] request is valid')
+  const result = await dbApi.delegationHistoryForAccount(
+    apiConfig.txHistoryResponseLimit,
+    req.body.account,
+  )
+  logger.debug('[delegationHistory] result calculated')
+  return result.rows
 }
 
 /**
@@ -275,7 +306,12 @@ export default {
   },
   accountInfo: {
     method: 'post',
-    path: withPrefix('/accountInfo'),
+    path: withPrefix('/account/info'),
     handler: accountInfo,
+  },
+  delegationHistory: {
+    method: 'post',
+    path: withPrefix('/account/delegationHistory'),
+    handler: delegationHistory,
   },
 }

@@ -30,6 +30,12 @@ declare module 'icarus-backend' {
     },
   };
 
+  declare type AccountRequest = {
+    body: {
+      account: string,
+    },
+  };
+
   declare type SignedTxRequest = {
     body: SignedTx
   };
@@ -40,6 +46,10 @@ declare module 'icarus-backend' {
 
   declare type DbApi = {
     hasGroupAddress: (addresses: Array<string>) => Promise<Boolean>,
+    delegationHistoryForAccount: (
+      limit: number,
+      account: string,
+    ) => Promise<ResultSet>,
     filterUsedAddresses: (addresses: Array<string>) => Promise<ResultSet>,
     unspentAddresses: () => Promise<ResultSet>,
     utxoForAddresses: (addresses: Array<string>) => Promise<ResultSet>,
