@@ -10,7 +10,7 @@ declare module 'icarus-backend' {
 
   declare type ApiConfig = {
     addressesRequestLimit: number,
-    txHistoryResponseLimit: number,
+    historyResponseLimit: number,
   };
 
   declare type Request = {

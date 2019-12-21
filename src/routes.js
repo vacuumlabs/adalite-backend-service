@@ -141,7 +141,7 @@ const transactionsHistory = (dbApi: DbApi, { logger, apiConfig }: ServerConfig) 
   validateDatetimeReq(req.body)
   logger.debug('[transactionsHistory] request is valid')
   const result = await dbApi.transactionsHistoryForAddresses(
-    apiConfig.txHistoryResponseLimit,
+    apiConfig.historyResponseLimit,
     req.body.addresses,
     moment(req.body.dateFrom).toDate(),
   )
@@ -241,7 +241,7 @@ const delegationHistory = (dbApi: DbApi, { logger, apiConfig }: ServerConfig) =>
   validateAccount(req.body)
   logger.debug('[delegationHistory] request is valid')
   const result = await dbApi.delegationHistoryForAccount(
-    apiConfig.txHistoryResponseLimit,
+    apiConfig.historyResponseLimit,
     req.body.account,
   )
   logger.debug('[delegationHistory] result calculated')

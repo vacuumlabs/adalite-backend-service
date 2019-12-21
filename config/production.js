@@ -9,7 +9,7 @@ module.exports = {
     port: 8080,
     apiConfig: {
       addressesRequestLimit: 50,
-      txHistoryResponseLimit: 20,
+      historyResponseLimit: 20,
     },
     importerSendTxEndpoint: 'http://icarus-importer:8200/api/txs/signed',
   },
