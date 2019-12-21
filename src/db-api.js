@@ -10,13 +10,12 @@ import type { DbApi } from 'icarus-backend'; // eslint-disable-line
  */
 const hasGroupAddress = (db: Pool) => async (
   addresses: Array<string>,
-): Promise<Boolean> => {
+): Promise<boolean> => {
   const res = await db.query({
     text: 'SELECT EXISTS ( SELECT 1 FROM group_addresses WHERE group_address = ANY($1) )',
     values: [addresses],
-    rowMode: 'array',
   })
-  return res.rows[0][0]
+  return res.rows[0].exists === true
 }
 
 // NULL value in column POOL means undelegation

@@ -45,7 +45,7 @@ declare module 'icarus-backend' {
   };
 
   declare type DbApi = {
-    hasGroupAddress: (addresses: Array<string>) => Promise<Boolean>,
+    hasGroupAddress: (addresses: Array<string>) => Promise<boolean>,
     delegationHistoryForAccount: (
       limit: number,
       account: string,
