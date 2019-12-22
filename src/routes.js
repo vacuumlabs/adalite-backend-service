@@ -198,7 +198,8 @@ const bestBlock = (dbApi: DbApi) => async () => {
 }
 
 /**
- * Endpoint for getting information for a specific account from node
+ * Endpoint for getting information for a specific account from node. Proxied to 
+ * jormungandr for now.
  * @param {*} db Database
  * @param {*} Server Server Config Object
  */
@@ -232,7 +233,7 @@ const stakePools = (dbApi: DbApi, { logger }: ServerConfig) => async () => {
 }
 
 /**
- *
+ * Endpoint for getting delegation history for specified account
  * @param {*} db Database
  * @param {*} Server Config Object
  */

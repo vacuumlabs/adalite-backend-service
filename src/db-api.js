@@ -4,7 +4,9 @@ import type { Pool, ResultSet } from 'pg'
 import type { DbApi } from 'icarus-backend'; // eslint-disable-line
 
 /**
- * Checks if addresses array contains group address
+ * Checks if addresses array contains group address. According to Emurgo,
+ * frontend should not explicitly query group addresses, it can lead to hard
+ * to detect bugs.
  * @param {Db Object} db
  * @param {Array<Address>} addresses
  */
@@ -41,7 +43,9 @@ const delegationHistoryForAccount = (db: Pool) => async (
   })
 
 /**
-* Gets all pools and their details
+* Gets all pools and their details. Currently the tables are joined on pool owner,
+* it bloats the left join a little bit since theres a few pools which even have the same ticker.
+* Hopefully this will be fixed in the future.
 * @param {Db Object} db
 */
 const stakePoolsDetailed = (db: Pool) => async (): Promise<ResultSet> =>
