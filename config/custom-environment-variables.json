@@ -13,6 +13,7 @@
   "server": {
     "port": "PORT",
     "importerSendTxEndpoint": "IMPORTER_ENDPOINT",
-    "corsEnabledFor": "CORS_ENABLED_FOR"
+    "corsEnabledFor": "CORS_ENABLED_FOR",
+    "jormun": "JORMUN_NODE"
   }
 }

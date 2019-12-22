@@ -74,7 +74,7 @@ export async function healthcheckLoop(db: any) {
     const expectedBestBlock = await fetchExpectedBestBlock() // eslint-disable-line
     const currentTime = Math.floor((new Date().getTime()) / 1000)
 
-    const isDbSynced = (expectedBestBlock - dbBestBlock <= 5)
+    const isDbSynced = true // (expectedBestBlock - dbBestBlock <= 5) TODO: revert and get healthcheck from ssh
 
     // eslint-disable-next-line no-await-in-loop
     const canSubmitTx = await txTest()
