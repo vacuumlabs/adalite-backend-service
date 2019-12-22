@@ -50,6 +50,7 @@ declare module 'icarus-backend' {
       limit: number,
       account: string,
     ) => Promise<ResultSet>,
+    stakePoolsDetailed: () => Promise<ResultSet>,
     filterUsedAddresses: (addresses: Array<string>) => Promise<ResultSet>,
     unspentAddresses: () => Promise<ResultSet>,
     utxoForAddresses: (addresses: Array<string>) => Promise<ResultSet>,

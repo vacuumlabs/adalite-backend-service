@@ -219,15 +219,16 @@ const accountInfo = (
   return res
 }
 
-const stakePools = ({ logger }: ServerConfig) => async () => {
-  const res = await axios.get(`${serverConfig.jormun}/api/v0/stake_pools`) // eslint-disable-line
-    .then(response => response.data)
-    .catch(error => {
-      logger.debug(error)
-      return []
-    })
-
-  return res
+/**
+ * Endpoint for getting information for all stake pools and their details
+ * @param {*} db Database
+ * @param {*} Server Server Config Object
+ */
+const stakePools = (dbApi: DbApi, { logger }: ServerConfig) => async () => {
+  logger.debug('[stakePools] query started')
+  const result = await dbApi.stakePoolsDetailed()
+  logger.debug('[stakePools] query finished')
+  return result.rows
 }
 
 /**

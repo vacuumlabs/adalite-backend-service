@@ -41,6 +41,28 @@ const delegationHistoryForAccount = (db: Pool) => async (
   })
 
 /**
+* Gets all pools and their details
+* @param {Db Object} db
+*/
+const stakePoolsDetailed = (db: Pool) => async (): Promise<ResultSet> =>
+  db.query({
+    text: `SELECT 
+        pc.pool AS pool_id,
+        poi.owner,
+        poi.time,
+        poi.info::json->>'name' AS name,
+        poi.info::json->>'description' AS description,
+        poi.info::json->>'ticker' AS ticker,
+        poi.info::json->>'homepage' AS homepage,
+        pc.parsed::json->'rewards'->>'fixed' AS fixed,
+        pc.parsed::json->'rewards'->>'ratio' AS ratio,
+        pc.parsed::json->'rewards'->>'limit' AS limit 
+      FROM pool_certificates pc 
+      LEFT JOIN pool_owners_info poi 
+        ON (pc.parsed::json#>>'{owners, 0}' = poi.owner)`,
+  })
+
+/**
  * Returns the list of addresses that were used at least once (as input or output)
  * @param {Db Object} db
  * @param {Array<Address>} addresses
@@ -171,6 +193,7 @@ const bestBlock = (db: Pool) => async (): Promise<number> => {
 export default (db: Pool): DbApi => ({
   hasGroupAddress: hasGroupAddress(db),
   delegationHistoryForAccount: delegationHistoryForAccount(db),
+  stakePoolsDetailed: stakePoolsDetailed(db),
   filterUsedAddresses: filterUsedAddresses(db),
   unspentAddresses: unspentAddresses(db),
   utxoForAddresses: utxoForAddresses(db),
