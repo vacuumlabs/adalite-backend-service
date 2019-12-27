@@ -11,7 +11,8 @@ const withPrefix = route => `/api${route}`
 const invalidAddress = 'Invalid Cardano address!'
 const invalidTx = 'Invalid transaction id!'
 
-const arraySum = (numbers) => numbers.reduce((acc, val) => acc.plus(Big(val)), Big(0))
+// return null if empty to distinguish delegations
+const arraySum = (numbers) => numbers ? numbers.reduce((acc, val) => acc.plus(Big(val)), Big(0)) : null
 
 /**
  * Helper function that takes movements for various addresses and a set of addresses we are
@@ -33,10 +34,11 @@ const combinedBalance = (transactions, addresses) => {
 const txToAddressInfo = (row) => ({
   ctbId: row.hash,
   ctbTimeIssued: moment(row.time).unix(),
-  ctbInputs: row.inputs_address.map(
-    (addr, i) => [addr, { getCoin: row.inputs_amount[i] }]),
-  ctbOutputs: row.outputs_address.map(
-    (addr, i) => [addr, { getCoin: row.outputs_amount[i] }]),
+  // return null if empty to distinguish delegations
+  ctbInputs: row.inputs_address ? row.inputs_address.map(
+    (addr, i) => [addr, { getCoin: row.inputs_amount[i] }]) : null,  
+  ctbOutputs: row.outputs_address ? row.outputs_address.map(
+    (addr, i) => [addr, { getCoin: row.outputs_amount[i] }]) : null,
   ctbInputSum: {
     getCoin: `${arraySum(row.inputs_amount)}`,
   },
@@ -191,9 +193,9 @@ const bulkAddressSummary = (dbApi: any, { logger, apiConfig }: ServerConfig) => 
   if (!addresses || addresses.length === 0 || addresses.length > limit) {
     return { Left: `Addresses request length should be (0, ${limit}]` }
   }
-  if (addresses.some((addr) => !isValidAddress(addr))) {
-    return { Left: invalidAddress }
-  }
+  // if (addresses.some((addr) => !isValidAddress(addr))) {
+  //   return { Left: invalidAddress }
+  // } TODO: leave validation up to frontend?
   const txList = await dbApi.bulkAddressSummary(addresses)
   const transactions = txList.rows
 

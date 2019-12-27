@@ -148,7 +148,15 @@ const transactionsHistoryForAddresses = (db: Pool) => async (
 const bulkAddressSummary = (db: Pool) => async (addresses: Array<string>): Promise<ResultSet> =>
   db.query({
     text: `SELECT * FROM "txs"
-      WHERE hash = ANY (SELECT tx_hash FROM "tx_addresses" WHERE address = ANY($1))
+      WHERE hash = ANY (
+        SELECT tx_hash 
+        FROM "tx_addresses" 
+        WHERE address = ANY($1) 
+        OR address in (
+          SELECT group_address from group_addresses
+          WHERE utxo_address = ANY($1)
+        )
+      )
       AND tx_state = $2
       ORDER BY time DESC`,
     values: [addresses, 'Successful'],
