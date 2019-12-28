@@ -67,6 +67,25 @@ const stakePoolsDetailed = (db: Pool) => async (): Promise<ResultSet> =>
   })
 
 /**
+  * Gets info about pool specified by its id
+  * @param {PoolId} poolId
+*/
+const stakePoolInfo = (db: Pool) => async (
+  poolId: string,
+): Promise<ResultSet> =>
+  db.query({
+    text: `SELECT
+        pc.pool AS pool_id,
+        poi.*
+      FROM pool_certificates pc
+      LEFT JOIN pool_owners_info poi 
+        ON (pc.parsed::json#>>'{owners, 0}' = poi.owner)
+      WHERE pc.pool=$1
+    `,
+    values: [poolId],
+  })
+
+/**
  * Returns the list of addresses that were used at least once (as input or output)
  * @param {Db Object} db
  * @param {Array<Address>} addresses
@@ -211,6 +230,7 @@ const bestBlock = (db: Pool) => async (): Promise<number> => {
 }
 
 export default (db: Pool): DbApi => ({
+  stakePoolInfo: stakePoolInfo(db),
   bulkGroupAddresses: bulkGroupAddresses(db),
   hasGroupAddress: hasGroupAddress(db),
   delegationHistoryForAccount: delegationHistoryForAccount(db),

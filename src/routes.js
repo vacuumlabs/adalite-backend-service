@@ -208,16 +208,18 @@ const accountInfo = (
 ) => async (req: AccountRequest) => {
   validateAccount(req.body)
   const res = await axios.get(`${serverConfig.jormun}/api/v0/account/${req.body.account}`) // eslint-disable-line
-    .then(response => {
-      logger.debug('[accountInfo] request calculated')
-      return response.data
-    })
+    .then(response => response.data)
     .catch(error => {
       logger.debug(error)
       return {}
     })
 
-  return res
+  const poolInfo = await dbApi.stakePoolInfo(res.delegation ? res.delegation.pools[0][0]: '')
+  logger.debug('[accountInfo] request calculated')
+  return {
+    ...res,
+    delegation: poolInfo.rows.length > 0 ? poolInfo.rows[0] : {}
+  }
 }
 
 /**
