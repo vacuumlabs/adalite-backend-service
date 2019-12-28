@@ -148,10 +148,13 @@ const unspentTxOutputs = (dbApi: any, { logger, apiConfig }: ServerConfig) => as
   if (!addresses || addresses.length === 0 || addresses.length > limit) {
     return { Left: `Addresses request length should be (0, ${limit}]` }
   }
-  if (addresses.some((addr) => !isValidAddress(addr))) {
-    return { Left: invalidAddress }
-  }
-  const result = await dbApi.utxoLegacy(addresses)
+  // if (addresses.some((addr) => !isValidAddress(addr))) {
+  //   return { Left: invalidAddress }
+  // }
+  const groupAddressesResult = await dbApi.bulkGroupAddresses(addresses)
+  const groupAddresses = groupAddressesResult.rows ?
+    groupAddressesResult.rows.map((row) => row.group_address) : []
+  const result = await dbApi.utxoLegacy([...addresses, ...groupAddresses])
   const mappedRows = result.rows.map((row) => {
     const coins = row.cuCoins
     const newRow = row
@@ -196,7 +199,10 @@ const bulkAddressSummary = (dbApi: any, { logger, apiConfig }: ServerConfig) => 
   // if (addresses.some((addr) => !isValidAddress(addr))) {
   //   return { Left: invalidAddress }
   // } TODO: leave validation up to frontend?
-  const txList = await dbApi.bulkAddressSummary(addresses)
+  const groupAddressesResult = await dbApi.bulkGroupAddresses(addresses)
+  const groupAddresses = groupAddressesResult.rows ?
+    groupAddressesResult.rows.map((row) => row.group_address) : []
+  const txList = await dbApi.bulkAddressSummary([...addresses, ...groupAddresses])
   const transactions = txList.rows
 
   const right = {

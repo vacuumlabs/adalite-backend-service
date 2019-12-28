@@ -152,14 +152,22 @@ const bulkAddressSummary = (db: Pool) => async (addresses: Array<string>): Promi
         SELECT tx_hash 
         FROM "tx_addresses" 
         WHERE address = ANY($1) 
-        OR address in (
-          SELECT group_address from group_addresses
-          WHERE utxo_address = ANY($1)
-        )
       )
       AND tx_state = $2
       ORDER BY time DESC`,
     values: [addresses, 'Successful'],
+  })
+
+  /**
+ * Queries DB for group addresses associated with utxo_addresses.
+ * @param {Db Object} db
+ * @param {Array<Address>} addresses
+ */
+const bulkGroupAddresses = (db: Pool) => async (addresses: Array<string>): Promise<ResultSet> =>
+  db.query({
+    text: `SELECT group_address from group_addresses
+          WHERE utxo_address = ANY($1)`,
+    values: [addresses],
   })
 
 /**
@@ -203,6 +211,7 @@ const bestBlock = (db: Pool) => async (): Promise<number> => {
 }
 
 export default (db: Pool): DbApi => ({
+  bulkGroupAddresses: bulkGroupAddresses(db),
   hasGroupAddress: hasGroupAddress(db),
   delegationHistoryForAccount: delegationHistoryForAccount(db),
   stakePoolsDetailed: stakePoolsDetailed(db),
