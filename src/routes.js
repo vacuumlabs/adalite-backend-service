@@ -172,8 +172,8 @@ const signedTransaction = (
   }
   logger.debug('[signedTransaction] transaction sent to backend, response:', response)
   if (response.status === 200) {
-    if (response.data === 'Transaction sent successfully!') {
-      return response.data
+    if (response.data === '@Ok') {
+      return 'Transaction sent successfully!'
     }
 
     logger.debug('[signedTransaction] Unknown response from backend')

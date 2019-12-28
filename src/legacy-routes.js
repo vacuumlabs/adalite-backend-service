@@ -150,7 +150,7 @@ const unspentTxOutputs = (dbApi: any, { logger, apiConfig }: ServerConfig) => as
   }
   // if (addresses.some((addr) => !isValidAddress(addr))) {
   //   return { Left: invalidAddress }
-  // }
+  // } TODO: leave validation up to frontend?
   const groupAddressesResult = await dbApi.bulkGroupAddresses(addresses)
   const groupAddresses = groupAddressesResult.rows ?
     groupAddressesResult.rows.map((row) => row.group_address) : []
