@@ -197,6 +197,20 @@ const bestBlock = (dbApi: DbApi) => async () => {
   return { Right: { bestBlock: result } }
 }
 
+const parseResults = (rows) => {
+  if (rows.length === 0) {
+    return []
+  }
+
+  return rows.map(row => (
+    {
+      ...row,
+      info: JSON.parse(row.info),
+      ratio: 1,
+    }
+  ))
+}
+
 /**
  * Endpoint for getting information for a specific account from node. Proxied to 
  * jormungandr for now.
@@ -215,10 +229,12 @@ const accountInfo = (
     })
 
   const poolInfo = await dbApi.stakePoolInfo(res.delegation ? res.delegation.pools[0][0]: '')
+  const ratioDelegations = parseResults(poolInfo.rows)
   logger.debug('[accountInfo] request calculated')
+
   return {
     ...res,
-    delegation: poolInfo.rows.length > 0 ? poolInfo.rows[0] : {}
+    delegation: ratioDelegations,
   }
 }
 
