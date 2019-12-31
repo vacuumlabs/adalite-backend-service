@@ -16,7 +16,7 @@ function shouldBlockRequest(req: any): boolean {
 
   if (req.url === '/api/v2/healthcheck') {
     return !instanceHealthStatus.healthy
-  } else if (['/api/v2/bestBlock', '/api/v2/healthStatus', '/api/txs/last'].includes(req.url)) {
+  } else if (['/api/v2/bestBlock', '/api/v2/healthStatus'].includes(req.url)) {
     // these requests are good to inspect the instance when it becomes unhealthy
     return false
   }

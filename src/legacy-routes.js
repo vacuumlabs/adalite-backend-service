@@ -161,24 +161,6 @@ const unspentTxOutputs = (dbApi: any, { logger, apiConfig }: ServerConfig) => as
 }
 
 /**
- * This endpoint returns information about the last 20 transactions
- * @param {*} db Database
- * @param {*} Server Server Config Object
- */
-const lastTxs = (dbApi: any, { logger }: ServerConfig) => async () => {
-  const result = await dbApi.lastTxs()
-  const right = result.rows.map((row) => ({
-    cteId: row.hash,
-    cteTimeIssued: moment(row.time).unix(),
-    cteAmount: {
-      getCoin: arraySum(row.outputs_amount),
-    },
-  }))
-  logger.debug('[lastTxs] result calculated')
-  return { Right: right }
-}
-
-/**
  * This endpoint returns the list of addresses, the number of their transactions and the list of
  * transactions.
  * @param {*} db Database
@@ -229,11 +211,6 @@ export default {
     method: 'post',
     path: withPrefix('/bulk/addresses/utxo'),
     handler: unspentTxOutputs,
-  },
-  lastTxs: {
-    method: 'get',
-    path: withPrefix('/txs/last'),
-    handler: lastTxs,
   },
   bulkAddressSummary: {
     method: 'post',

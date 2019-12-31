@@ -106,17 +106,6 @@ const utxoLegacy = (db: Pool) => async (addresses: Array<string>): Promise<Resul
     values: [addresses],
   })
 
-  /**
-* Queries TXS table for the last 20 transactions
-* @param {Db Object} db
-*/
-const lastTxs = (db: Pool) => async (): Promise<ResultSet> =>
-  db.query({
-    text: `SELECT * FROM "txs"
-      ORDER BY "time" DESC
-      LIMIT 20`,
-  })
-
 const bestBlock = (db: Pool) => async (): Promise<number> => {
   const query = await db.query('SELECT * FROM "bestblock"')
   return query.rows.length > 0 ? parseInt(query.rows[0].best_block_num, 10) : 0
@@ -133,5 +122,4 @@ export default (db: Pool): DbApi => ({
   bulkAddressSummary: bulkAddressSummary(db),
   txSummary: txSummary(db),
   utxoLegacy: utxoLegacy(db),
-  lastTxs: lastTxs(db),
 })
