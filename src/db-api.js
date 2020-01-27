@@ -49,7 +49,7 @@ const txHistoryQuery = (limit: number) => `
       where address = ANY ($1)
     )
     AND last_update >= $2
-  ORDER BY last_update ASC
+  ORDER BY time DESC
   LIMIT ${limit}
 `
 
