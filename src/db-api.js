@@ -53,14 +53,11 @@ const stakePoolsDetailed = (db: Pool) => async (): Promise<ResultSet> =>
     text: `SELECT 
         pc.pool AS pool_id,
         poi.owner,
-        poi.time,
         poi.info::json->>'name' AS name,
         poi.info::json->>'description' AS description,
         poi.info::json->>'ticker' AS ticker,
         poi.info::json->>'homepage' AS homepage,
-        pc.parsed::json->'rewards'->>'fixed' AS fixed,
-        pc.parsed::json->'rewards'->>'ratio' AS ratio,
-        pc.parsed::json->'rewards'->>'limit' AS limit 
+        pc.parsed::json->'rewards' AS rewards
       FROM pool_certificates pc 
       LEFT JOIN pool_owners_info poi 
         ON (pc.parsed::json#>>'{owners, 0}' = poi.owner)`,
@@ -70,17 +67,22 @@ const stakePoolsDetailed = (db: Pool) => async (): Promise<ResultSet> =>
   * Gets info about pool specified by its id
   * @param {PoolId} poolId
 */
-const stakePoolInfo = (db: Pool) => async (
+const bulkStakePoolInfo = (db: Pool) => async (
   poolId: string,
 ): Promise<ResultSet> =>
   db.query({
     text: `SELECT
         pc.pool AS pool_id,
-        poi.*
+        poi.owner,
+        poi.info::json->>'name' AS name,
+        poi.info::json->>'description' AS description,
+        poi.info::json->>'ticker' AS ticker,
+        poi.info::json->>'homepage' AS homepage,
+        pc.parsed::json->'rewards' as rewards
       FROM pool_certificates pc
       LEFT JOIN pool_owners_info poi 
         ON (pc.parsed::json#>>'{owners, 0}' = poi.owner)
-      WHERE pc.pool=$1
+      WHERE pc.pool = ANY($1)
     `,
     values: [poolId],
   })
@@ -230,7 +232,7 @@ const bestBlock = (db: Pool) => async (): Promise<number> => {
 }
 
 export default (db: Pool): DbApi => ({
-  stakePoolInfo: stakePoolInfo(db),
+  bulkStakePoolInfo: bulkStakePoolInfo(db),
   bulkGroupAddresses: bulkGroupAddresses(db),
   hasGroupAddress: hasGroupAddress(db),
   delegationHistoryForAccount: delegationHistoryForAccount(db),
