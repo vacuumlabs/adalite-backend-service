@@ -211,7 +211,7 @@ const parseResults = (rows, ratios) => {
   ))
 }
 
-/** 
+/**
  * jormun node returns delegation info in format [[pool_id1, ratio1], [pool_id2, ratio2]],
  * convert this into object
 */
