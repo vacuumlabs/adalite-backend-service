@@ -197,7 +197,7 @@ const bestBlock = (dbApi: DbApi) => async () => {
   return { Right: { bestBlock: result } }
 }
 
-const parseResults = (rows) => {
+const parseResults = (rows, ratios) => {
   if (rows.length === 0) {
     return []
   }
@@ -205,10 +205,21 @@ const parseResults = (rows) => {
   return rows.map(row => (
     {
       ...row,
-      info: JSON.parse(row.info),
-      ratio: 1,
+      // info: JSON.parse(row.info),
+      ratio: ratios[row.pool_id],
     }
   ))
+}
+
+/** 
+ * jormun node returns delegation info in format [[pool_id1, ratio1], [pool_id2, ratio2]],
+ * convert this into object
+*/
+const mapRatios = (poolValuePairs) => {
+  return poolValuePairs.reduce((obj, [key, val]) => {
+    obj[key] = val
+    return obj
+  }, {})
 }
 
 /**
@@ -223,13 +234,21 @@ const accountInfo = (
   validateAccount(req.body)
   const res = await axios.get(`${serverConfig.jormun}/api/v0/account/${req.body.account}`) // eslint-disable-line
     .then(response => response.data)
-    .catch(error => {
-      logger.debug(error)
-      return {}
+    .catch(err => {
+      logger.debug(err)
+
+      if (err.response && err.response.status === 503) {
+        throw new InternalServerError('Jormungandr node down.')
+      }
+
+      throw new BadRequestError('Account not found in blockchain.')
     })
 
-  const poolInfo = await dbApi.stakePoolInfo(res.delegation ? res.delegation.pools[0][0]: '')
-  const ratioDelegations = parseResults(poolInfo.rows)
+  const poolIds = res.delegation ? res.delegation.pools.map(pool => pool[0]) : []
+  const poolRatios = res.delegation ? mapRatios(res.delegation.pools) : {}
+
+  const poolInfo = await dbApi.bulkStakePoolInfo(poolIds)
+  const ratioDelegations = parseResults(poolInfo.rows, poolRatios)
   logger.debug('[accountInfo] request calculated')
 
   return {

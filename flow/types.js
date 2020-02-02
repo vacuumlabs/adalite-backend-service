@@ -45,7 +45,7 @@ declare module 'icarus-backend' {
   };
 
   declare type DbApi = {
-    bulkStakePoolInfo: (poolId: string) => Promise<ResultSet>,
+    bulkStakePoolInfo: (poolId: Array<string>) => Promise<ResultSet>,
     hasGroupAddress: (addresses: Array<string>) => Promise<boolean>,
     delegationHistoryForAccount: (
       limit: number,
