@@ -11,7 +11,7 @@ import type {
   ImporterApi,
 } from 'icarus-backend'; // eslint-disable-line
 
-import { InternalError, InternalServerError, BadRequestError } from 'restify-errors'
+import { InternalError, InternalServerError, BadRequestError, ServiceUnavailableError } from 'restify-errors'
 import moment from 'moment'
 import axios from 'axios'
 import { version } from '../package.json'
@@ -65,6 +65,16 @@ function validateAccount({ account } = {}) {
   if (!account) {
     throw new Error('Account is empty.')
   }
+}
+
+const checkJormunSync = async () => {
+  const isOk = await axios.get(serverConfig.healthcheckUrl)
+    .then(response => response.data.is_ok === true)
+    .catch(() => {
+      throw new InternalError('Healthcheck down.')
+    })
+
+  return isOk
 }
 
 /**
@@ -149,6 +159,19 @@ const transactionsHistory = (dbApi: DbApi, { logger, apiConfig }: ServerConfig) 
   return result.rows
 }
 
+const retrySync = async (maxRetries: number) => {
+  let retries = 0
+  while (retries < maxRetries) {
+    const isSync = await checkJormunSync() // eslint-disable-line
+    if (isSync) {
+      return true
+    }
+    retries += 1
+  }
+
+  return false
+}
+
 /**
  * Broadcasts a signed transaction to the block-importer node
  * @param {*} db Database
@@ -163,6 +186,13 @@ const signedTransaction = (
 ) => async (req: SignedTxRequest) => {
   validateSignedTransactionReq(req.body)
   logger.debug('[signedTransaction] request start')
+
+  const isJormunSynced = await retrySync(3)
+  if (!isJormunSynced) {
+    logger.debug('[signedTransaction] Jormungandr node is not in sync.')
+    throw new InternalServerError('Jormungandr node is not in sync.')
+  }
+
   let response
   try {
     response = await importerApi.sendTx(req.body)
@@ -238,7 +268,7 @@ const accountInfo = (
       logger.debug(err)
 
       if (err.response && err.response.status === 503) {
-        throw new InternalServerError('Jormungandr node down.')
+        throw new ServiceUnavailableError('Jormungandr node down.')
       }
 
       throw new BadRequestError('Account not found in blockchain.')
