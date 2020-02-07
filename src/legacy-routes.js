@@ -11,8 +11,8 @@ const withPrefix = route => `/api${route}`
 const invalidAddress = 'Invalid Cardano address!'
 const invalidTx = 'Invalid transaction id!'
 
-// return null if empty to distinguish delegations
-const arraySum = (numbers) => numbers ? numbers.reduce((acc, val) => acc.plus(Big(val)), Big(0)) : null
+// return zero if empty to distinguish delegations
+const arraySum = (numbers) => numbers ? numbers.reduce((acc, val) => acc.plus(Big(val)), Big(0)) : 0
 
 /**
  * Helper function that takes movements for various addresses and a set of addresses we are
@@ -34,11 +34,11 @@ const combinedBalance = (transactions, addresses) => {
 const txToAddressInfo = (row) => ({
   ctbId: row.hash,
   ctbTimeIssued: moment(row.time).unix(),
-  // return null if empty to distinguish delegations
-  ctbInputs: row.inputs_address ? row.inputs_address.map(
-    (addr, i) => [addr, { getCoin: row.inputs_amount[i] }]) : null,  
+  ctbInputs: row.inputs_address.map(
+    (addr, i) => [addr, { getCoin: row.inputs_amount[i] }]),
+  // return [] if empty to distinguish delegations
   ctbOutputs: row.outputs_address ? row.outputs_address.map(
-    (addr, i) => [addr, { getCoin: row.outputs_amount[i] }]) : null,
+    (addr, i) => [addr, { getCoin: row.outputs_amount[i] }]) : [],
   ctbInputSum: {
     getCoin: `${arraySum(row.inputs_amount)}`,
   },
@@ -113,8 +113,9 @@ const txSummary = (dbApi: any, { logger }: ServerConfig) => async (req: any,
     },
     ctsInputs: row.inputs_address.map(
       (addr, i) => [addr, { getCoin: row.inputs_amount[i] }]),
-    ctsOutputs: row.outputs_address.map(
-      (addr, i) => [addr, { getCoin: row.outputs_amount[i] }]),
+    // return [] if empty to distinguish delegations
+    ctsOutputs: row.outputs_address ? row.outputs_address.map(
+      (addr, i) => [addr, { getCoin: row.outputs_amount[i] }]) : [],
   }
   logger.debug('[txSummary] result calculated')
   return { Right: right }
