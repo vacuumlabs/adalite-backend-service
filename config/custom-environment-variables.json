@@ -14,6 +14,7 @@
     "port": "PORT",
     "importerSendTxEndpoint": "IMPORTER_ENDPOINT",
     "corsEnabledFor": "CORS_ENABLED_FOR",
-    "jormun": "JORMUN_NODE"
+    "jormun": "JORMUN_NODE",
+    "healthcheckUrl": "HEALTHCHECK_URL"
   }
 }
