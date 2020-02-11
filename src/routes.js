@@ -11,12 +11,12 @@ import type {
   ImporterApi,
 } from 'icarus-backend'; // eslint-disable-line
 
-import { 
+import {
   InternalError,
   InternalServerError,
   NotFoundError,
   ServiceUnavailableError,
-  BadRequestError
+  BadRequestError,
 } from 'restify-errors'
 import moment from 'moment'
 import axios from 'axios'
@@ -251,15 +251,15 @@ const parseResults = (rows, ratios) => {
  * jormun node returns delegation info in format [[pool_id1, ratio1], [pool_id2, ratio2]],
  * convert this into object
 */
-const mapRatios = (poolValuePairs) => {
-  return poolValuePairs.reduce((obj, [key, val]) => {
-    obj[key] = val
+const mapRatios = (poolValuePairs) =>
+  poolValuePairs.reduce((obj, [key, val]) => {
+    obj[key] = val // eslint-disable-line no-param-reassign
     return obj
   }, {})
-}
+
 
 /**
- * Endpoint for getting information for a specific account from node. Proxied to 
+ * Endpoint for getting information for a specific account from node. Proxied to
  * jormungandr for now.
  * @param {*} db Database
  * @param {*} Server Server Config Object
