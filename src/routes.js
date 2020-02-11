@@ -11,7 +11,7 @@ import type {
   ImporterApi,
 } from 'icarus-backend'; // eslint-disable-line
 
-import { InternalError, InternalServerError, BadRequestError, ServiceUnavailableError } from 'restify-errors'
+import { InternalError, InternalServerError, NotFoundError, ServiceUnavailableError } from 'restify-errors'
 import moment from 'moment'
 import axios from 'axios'
 import { version } from '../package.json'
@@ -271,7 +271,7 @@ const accountInfo = (
         throw new ServiceUnavailableError('Jormungandr node down.')
       }
 
-      throw new BadRequestError('Account not found in blockchain.')
+      throw new NotFoundError('Account not found in blockchain.')
     })
 
   const poolIds = res.delegation ? res.delegation.pools.map(pool => pool[0]) : []
