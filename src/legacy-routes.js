@@ -34,9 +34,9 @@ const combinedBalance = (transactions, addresses) => {
 const txToAddressInfo = (row) => ({
   ctbId: row.hash,
   ctbTimeIssued: moment(row.time).unix(),
-  ctbInputs: row.inputs_address.map(
-    (addr, i) => [addr, { getCoin: row.inputs_amount[i] }]),
   // return [] if empty to distinguish delegations
+  ctbInputs: row.inputs_address ? row.inputs_address.map(
+    (addr, i) => [addr, { getCoin: row.inputs_amount[i] }]) : [],
   ctbOutputs: row.outputs_address ? row.outputs_address.map(
     (addr, i) => [addr, { getCoin: row.outputs_amount[i] }]) : [],
   ctbInputSum: {
@@ -111,9 +111,9 @@ const txSummary = (dbApi: any, { logger }: ServerConfig) => async (req: any,
     ctsFees: {
       getCoin: `${totalInput.sub(totalOutput)}`,
     },
-    ctsInputs: row.inputs_address.map(
-      (addr, i) => [addr, { getCoin: row.inputs_amount[i] }]),
     // return [] if empty to distinguish delegations
+    ctsInputs: row.inputs_address ? row.inputs_address.map(
+      (addr, i) => [addr, { getCoin: row.inputs_amount[i] }]) : [],
     ctsOutputs: row.outputs_address ? row.outputs_address.map(
       (addr, i) => [addr, { getCoin: row.outputs_amount[i] }]) : [],
   }
