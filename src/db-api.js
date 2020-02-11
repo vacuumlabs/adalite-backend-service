@@ -60,7 +60,8 @@ const stakePoolsDetailed = (db: Pool) => async (): Promise<ResultSet> =>
         pc.parsed::json->'rewards' AS rewards
       FROM pool_certificates pc 
       LEFT JOIN pool_owners_info poi 
-        ON (pc.parsed::json#>>'{owners, 0}' = poi.owner)`,
+        ON (pc.parsed::json#>>'{owners, 0}' = poi.owner)
+      WHERE poi.info::json->>'ticker' NOT LIKE 'VOID%'`,
   })
 
 /**
@@ -71,7 +72,7 @@ const bulkStakePoolInfo = (db: Pool) => async (
   poolId: string,
 ): Promise<ResultSet> =>
   db.query({
-    text: `SELECT
+    text: `SELECT DISTINCT ON (ticker)        
         pc.pool AS pool_id,
         poi.owner,
         poi.info::json->>'name' AS name,
@@ -82,7 +83,8 @@ const bulkStakePoolInfo = (db: Pool) => async (
       FROM pool_certificates pc
       LEFT JOIN pool_owners_info poi 
         ON (pc.parsed::json#>>'{owners, 0}' = poi.owner)
-      WHERE pc.pool = ANY($1)
+      WHERE pc.pool = ANY($1) AND poi.info::json->>'ticker' NOT LIKE 'VOID%'
+      ORDER BY ticker, poi.id DESC;
     `,
     values: [poolId],
   })
