@@ -11,7 +11,13 @@ import type {
   ImporterApi,
 } from 'icarus-backend'; // eslint-disable-line
 
-import { InternalError, InternalServerError, NotFoundError, ServiceUnavailableError } from 'restify-errors'
+import { 
+  InternalError,
+  InternalServerError,
+  NotFoundError,
+  ServiceUnavailableError,
+  BadRequestError
+} from 'restify-errors'
 import moment from 'moment'
 import axios from 'axios'
 import { version } from '../package.json'

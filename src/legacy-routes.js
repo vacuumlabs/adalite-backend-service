@@ -12,7 +12,7 @@ const invalidAddress = 'Invalid Cardano address!'
 const invalidTx = 'Invalid transaction id!'
 
 // return zero if empty to distinguish delegations
-const arraySum = (numbers) => numbers ? numbers.reduce((acc, val) => acc.plus(Big(val)), Big(0)) : 0
+const arraySum = (numbers) => numbers ? numbers.reduce((acc, val) => acc.plus(Big(val)), Big(0)) : Big(0)
 
 /**
  * Helper function that takes movements for various addresses and a set of addresses we are

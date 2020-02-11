@@ -69,7 +69,7 @@ const stakePoolsDetailed = (db: Pool) => async (): Promise<ResultSet> =>
   * @param {PoolId} poolId
 */
 const bulkStakePoolInfo = (db: Pool) => async (
-  poolId: string,
+  poolIds: Array<string>,
 ): Promise<ResultSet> =>
   db.query({
     text: `SELECT DISTINCT ON (ticker)        
@@ -86,7 +86,7 @@ const bulkStakePoolInfo = (db: Pool) => async (
       WHERE pc.pool = ANY($1) AND poi.info::json->>'ticker' NOT LIKE 'VOID%'
       ORDER BY ticker, poi.id DESC;
     `,
-    values: [poolId],
+    values: [poolIds],
   })
 
 /**
