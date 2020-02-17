@@ -47,6 +47,9 @@ async function txTest(): Promise<boolean> {
       signedTx: Buffer.from(txBody, 'hex').toString('base64'),
     }
     response = await importer.sendTx(signedBody)
+    if (response.status === 200 && response.data === '@Ok') {
+      return true
+    }
   } catch (err) {
     if (err.response && err.response.status === 400) {
       return true
