@@ -148,7 +148,7 @@ const unspentTxOutputs = (dbApi: any, { logger, apiConfig }: ServerConfig) => as
 ) => {
   const addresses = req.body
   const limit = apiConfig.addressesRequestLimit
-  if (!addresses || addresses.length === 0 || addresses.length > limit) {
+  if (!addresses || !addresses.length || addresses.length === 0 || addresses.length > limit) {
     return { Left: `Addresses request length should be (0, ${limit}]` }
   }
   // if (addresses.some((addr) => !isValidAddress(addr))) {
@@ -196,7 +196,7 @@ const bulkAddressSummary = (dbApi: any, { logger, apiConfig }: ServerConfig) => 
 ) => {
   const addresses = req.body
   const limit = apiConfig.addressesRequestLimit
-  if (!addresses || addresses.length === 0 || addresses.length > limit) {
+  if (!addresses || !addresses.length || addresses.length === 0 || addresses.length > limit) {
     return { Left: `Addresses request length should be (0, ${limit}]` }
   }
   // if (addresses.some((addr) => !isValidAddress(addr))) {
