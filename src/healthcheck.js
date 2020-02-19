@@ -77,7 +77,8 @@ export async function healthcheckLoop(db: any) {
     const expectedBestBlock = await fetchExpectedBestBlock() // eslint-disable-line
     const currentTime = Math.floor((new Date().getTime()) / 1000)
 
-    const isDbSynced = expectedBestBlock - dbBestBlock <= 10
+    // if both explorers are down, pretend to be ok
+    const isDbSynced = expectedBestBlock > 0 ? expectedBestBlock - dbBestBlock <= 10 : true
 
     // eslint-disable-next-line no-await-in-loop
     const canSubmitTx = await txTest()
