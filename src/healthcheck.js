@@ -8,7 +8,7 @@ import dbApi from './db-api'
 import importerApi from './importer-api'
 import type { DbApi } from 'icarus-backend' // eslint-disable-line
 
-const { logger, importerSendTxEndpoint } = config.get('server')
+const { logger, importerSendTxEndpoint, healthcheckUrl } = config.get('server')
 const importer = importerApi(importerSendTxEndpoint)
 
 // TODO refactor to state machine, add tests
@@ -26,11 +26,11 @@ async function fetchDbBestBlock(db): Promise<number> {
 }
 
 async function fetchExpectedBestBlock(): Promise<number> {
-  return axios.get('https://cardanoexplorer.com/api/blocks/pages') // eslint-disable-line
+  return axios.get(healthcheckUrl) // eslint-disable-line
     .then(response => {
-      const pages = response.data.Right[0]
-      const items = response.data.Right[1].length
-      return ((pages - 1) * 10) + items
+      const pooltoolHeight = response.data.pooltool_height || 0
+      const explorerHeight = response.data.explorer_height || 0
+      return Math.max(pooltoolHeight, explorerHeight)
     })
     .catch(error => {
       logger.debug(error)
@@ -42,11 +42,14 @@ async function txTest(): Promise<boolean> {
   let response
   try {
     // eslint-disable-next-line max-len
-    const txBody = '82839f8200d818582482582034b30ffcc37cb23320d01286e444711ceabc74e96c9fe2387f5c3f313942b32900ff9f8282d818584283581c8c0acb0542d176ddbb02678462081194e40204fb622960d188388b64a101581e581c6aedca971f6e65187d53b8315b90dfdb80ac4d6bc72c6bf0b5bad01e001a3c747b481a0007a1208282d818584283581ceb2e580be8db93a736bdd8e9fe0d5f6e8ca50f456bf11834749f98a4a101581e581c6aedca971f6e65187d53bc318a1979025a753c53a2d781e915cc5858001aaf177b461a000503daffa0818200d81858858258409b39227a5c47d594e14b39304af5100a7de7f348d0548b7dc9df49615b9a2de50e6ed2a5ebe9b917cea198cb4c2db24d3829ab4cd7b0345df8aa420d5d7acc6f584004d4d7db6eb5b0f352d3f5ad036ce73968155a539f7f60f85a1d9b264d1cc2bc9e7eef7262fa45b579dd1f30b8d7faff9e362a77a4f51c66074b75e47e15bf06'
+    const txBody = '00e000020102020000000001290dd9c3ee86405db0e85f64d31f5bdaf30035edbea7a7c58f2d4de8401fa928b4c2e783b70ec9396affe92eedf69ddb196c1528565ed912ff82a32b1ba88fb79e795aa500000000000f424084530b2ed5daf52e5b0d92caab230749a0d57488c6d8607336788a016c014f700f86cab5f073c35bbeb3e83be9264ccaaf358342937196debf5c72a032516827c60000000001122a7901f33ce1ad5342473a5faa3a550d3bfe71521a1786def2e306c83604fa5be077166470aecc99c6a91fd10704e7329c12d0a95ad2f580825fdff4aa4b82ac9f9d04'
     const signedBody = {
       signedTx: Buffer.from(txBody, 'hex').toString('base64'),
     }
     response = await importer.sendTx(signedBody)
+    if (response.status === 200 && response.data === '@Ok') {
+      return true
+    }
   } catch (err) {
     if (err.response && err.response.status === 400) {
       return true
@@ -74,7 +77,8 @@ export async function healthcheckLoop(db: any) {
     const expectedBestBlock = await fetchExpectedBestBlock() // eslint-disable-line
     const currentTime = Math.floor((new Date().getTime()) / 1000)
 
-    const isDbSynced = true // (expectedBestBlock - dbBestBlock <= 5) TODO: remove
+    // if both explorers are down, pretend to be ok
+    const isDbSynced = expectedBestBlock > 0 ? expectedBestBlock - dbBestBlock <= 10 : true
 
     // eslint-disable-next-line no-await-in-loop
     const canSubmitTx = await txTest()

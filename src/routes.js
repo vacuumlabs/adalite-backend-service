@@ -75,7 +75,7 @@ function validateAccount({ account } = {}) {
 
 const checkJormunSync = async () => {
   const isOk = await axios.get(serverConfig.healthcheckUrl)
-    .then(response => response.data.is_ok === true)
+    .then(response => response.data.is_maybe_ok === true)
     .catch(() => {
       throw new InternalError('Healthcheck down.')
     })
