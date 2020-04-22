@@ -13,4 +13,4 @@ RUN chmod +x wait-for-it.sh
 COPY ./ .
 RUN yarn build
 
-CMD ["/bin/sh", "-c", "yarn knex migrate:latest && yarn start"]
+CMD ["/bin/sh", "-c", "yarn start"]
