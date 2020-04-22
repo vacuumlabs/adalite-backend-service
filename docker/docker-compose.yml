@@ -27,7 +27,7 @@ services:
       SLACK_CHANNEL: ${SLACK_CHANNEL}
   adalite-importer:
     container_name: ${COMPOSE_PROJECT_NAME}-adalite-importer
-    image: refi93/adalite-importer:latest
+    image: refi93/adalite-importer:latest-master-shelley
     ports:
       - "${ADALITE_IMPORTER_HOST_PORT}:8080"
     depends_on:
