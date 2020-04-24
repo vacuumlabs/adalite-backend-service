@@ -49,17 +49,6 @@ In order to start a production instance, you need to:
 
 If you are running the instance for the first time on Ubuntu, you may run into file permission problems, since the volumes will probably be owned by root. To fix this, cd into the instance persistent storage folder (`$DATA_PATH` environment variable) and run `sudo chown -R 999:999 .` and restart the containers.
 
-## Database migrations
-
-[Knex](https://knexjs.org/#Migrations) is used to handle the migrations. The connection settings are taken from `.env`.
-
-Examples of migration commands:
-```
-yarn knex migrate:latest
-yarn knex migrate:rollback
-yarn knex migrate:make $name
-```
-
 ## Slack integration
 
 A healthcheck script is used to guarantee that the database contains the latest data. If the database stops updating, the backend service will stop responding to requests and a message will be sent to Slack. The following environment variables need to be set:
