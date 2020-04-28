@@ -271,14 +271,30 @@ const accountInfo = (
   const res = await axios.get(`${serverConfig.jormun}/api/v0/account/${req.body.account}`) // eslint-disable-line
     .then(response => response.data)
     .catch(err => {
-      logger.debug(err)
+      if (err.response && err.response.status === 404) {
+        return 'Empty account'
+      }
 
+      logger.debug(err)
       if (err.response && err.response.status === 503) {
         throw new ServiceUnavailableError('Jormungandr node down.')
       }
 
-      throw new NotFoundError('Account not found in blockchain.')
+      throw new InternalServerError('Error retrieving account info.')
     })
+
+  // return mocked initial data for empty wallets
+  if (res === 'Empty account') {
+    return {
+      delegation: [],
+      value: 0,
+      counter: 0,
+      last_rewards: {
+        epoch: 0,
+        reward: 0,
+      },
+    }
+  }
 
   const poolIds = res.delegation ? res.delegation.pools.map(pool => pool[0]) : []
   const poolRatios = res.delegation ? mapRatios(res.delegation.pools) : {}
