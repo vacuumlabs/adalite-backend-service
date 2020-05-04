@@ -39,7 +39,7 @@
     "@babel/register": "^7.0.0",
     "@babel/runtime": "^7.2.0",
     "@slack/client": "^4.8.0",
-    "axios": "0.18.0",
+    "axios": "^0.19.2",
     "big.js": "^5.2.2",
     "bunyan": "1.8.12",
     "cardano-crypto.js": "^4.2.1",
