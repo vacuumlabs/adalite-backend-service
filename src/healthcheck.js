@@ -83,7 +83,7 @@ export async function healthcheckLoop(db: any) {
      * cardano-http-bridge: https://github.com/Emurgo/cardano-http-bridge/issues/17
     */
     // eslint-disable-next-line no-await-in-loop
-    const canSubmitTx = (await txTest()) && (await txTest())
+    const canSubmitTx = (await txTest()) || (await txTest())
 
     const isHealthy = isDbSynced && canSubmitTx
     const { healthy: wasHealthy } = instanceHealthStatus
