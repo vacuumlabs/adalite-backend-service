@@ -18,7 +18,7 @@ import responseGuard from './middleware/response-guard'
 
 const serverConfig = config.get('server')
 const {
-  logger, importerSendTxEndpoint, disableHealthcheck, corsEnabledFor, allowCredentials,
+  logger, importerUrl, disableHealthcheck, corsEnabledFor, allowCredentials,
 } = serverConfig
 
 async function createServer() {
@@ -64,7 +64,7 @@ async function createServer() {
         const result = await handler(
           dbApi(db),
           serverConfig,
-          importerApi(importerSendTxEndpoint),
+          importerApi(importerUrl),
         )(req)
         res.send(result)
         next()

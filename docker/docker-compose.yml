@@ -22,7 +22,8 @@ services:
       DB_PASSWORD: ${POSTGRES_PASSWORD}
       DB_USER: ${POSTGRES_USER}
       CORS_ENABLED_FOR: ${CORS_ENABLED_FOR}
-      IMPORTER_ENDPOINT: http://adalite-importer:8080/api/txs/signed
+      IMPORTER_URL: http://adalite-importer:8080
+      CARDANO_BRIDGE_URL: http://cardano-http-bridge:8082
       SLACK_TOKEN: ${SLACK_TOKEN}
       SLACK_CHANNEL: ${SLACK_CHANNEL}
   adalite-importer:

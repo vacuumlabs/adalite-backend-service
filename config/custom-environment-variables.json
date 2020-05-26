@@ -12,7 +12,8 @@
   },
   "server": {
     "port": "PORT",
-    "importerSendTxEndpoint": "IMPORTER_ENDPOINT",
+    "importerUrl": "IMPORTER_URL",
     "corsEnabledFor": "CORS_ENABLED_FOR"
-  }
+  },
+  "cardanoHttpBridgeUrl": "CARDANO_BRIDGE_URL"
 }
