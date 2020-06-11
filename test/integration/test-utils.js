@@ -7,7 +7,7 @@ import createServer from '../../build/server'
 function api(server): Hippie {
   return hippie(server)
     .json()
-    .base('http://localhost:8080/api/v2')
+    .base('http://localhost:8080/api')
 }
 
 /**

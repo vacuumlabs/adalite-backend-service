@@ -1,7 +1,31 @@
 // @flow
 
-import type { Pool, ResultSet } from 'pg'
-import type { DbApi } from 'icarus-backend'; // eslint-disable-line
+import type { Pool } from 'pg'
+import type {
+  DbApi,
+  TypedResultSet,
+  TxInput,
+  TxOutput,
+  UtxoLegacyDbResult,
+  Tx,
+  SingleTxInputDbResult,
+  GetBlockDbResult,
+  GetRawTxDbResult,
+  GetTxDbResult,
+  TransactionsHistoryDbResult,
+  UtxoForAddressesDbResult,
+  UsedAddressDbResult,
+  UtxoSumDbResult,
+} from 'icarus-backend'; // eslint-disable-line
+
+// helper function to avoid destructuring ".rows" in the codebase
+const extractRows = <T>(
+  dbQuery: (...dbArgs: any) => Promise<TypedResultSet<T>>,
+): (...args: any) => Promise<Array<T>> => async (...args) => {
+    const dbResult = await dbQuery(...args)
+    return dbResult.rows
+  }
+
 
 /**
  * Returns the list of addresses that were used at least once (as input or output)
@@ -10,18 +34,22 @@ import type { DbApi } from 'icarus-backend'; // eslint-disable-line
  */
 const filterUsedAddresses = (db: Pool) => async (
   addresses: Array<string>,
-): Promise<ResultSet> =>
-  db.query({
-    text: 'SELECT DISTINCT address FROM "tx_addresses" WHERE address = ANY($1)',
+): Promise<TypedResultSet<UsedAddressDbResult>> =>
+  (db.query({
+    text: 'SELECT DISTINCT address FROM tx_out WHERE address = ANY($1)',
     values: [addresses],
     rowMode: 'array',
-  })
+  }): any)
 
-const unspentAddresses = (db: Pool) => async (): Promise<ResultSet> =>
-  db.query({
-    text: 'SELECT DISTINCT utxos.receiver FROM utxos',
-    rowMode: 'array',
-  })
+const utxoQuery = `SELECT 
+  TRIM(LEADING '\\x' from tx.hash::text) AS "tx_hash", tx_out.index AS "tx_index",
+  tx_out.address AS "receiver", tx_out.value AS "amount", tx.block::INTEGER as "block_num"
+FROM tx
+INNER JOIN tx_out ON tx.id = tx_out.tx_id
+WHERE NOT EXISTS (SELECT true
+  FROM tx_in
+  WHERE (tx_out.tx_id = tx_in.tx_out_id) AND (tx_out.index = tx_in.tx_out_index)
+) AND (tx_out.address = ANY($1))`
 
 /**
  * Queries UTXO table looking for unspents for given addresses
@@ -29,28 +57,40 @@ const unspentAddresses = (db: Pool) => async (): Promise<ResultSet> =>
  * @param {Db Object} db
  * @param {Array<Address>} addresses
  */
-const utxoForAddresses = (db: Pool) => async (addresses: Array<string>) =>
-  db.query('SELECT * FROM "utxos" WHERE receiver = ANY($1)', [addresses])
+const utxoForAddresses = (db: Pool) => async (addresses: Array<string>)
+: Promise<TypedResultSet<UtxoForAddressesDbResult>> =>
+  (db.query({
+    text: utxoQuery,
+    values: [addresses],
+  }): any)
 
-const utxoSumForAddresses = (db: Pool) => async (addresses: Array<string>) =>
-  db.query('SELECT SUM(amount) FROM "utxos" WHERE receiver = ANY($1)', [
-    addresses,
-  ])
+const utxoSumForAddresses = (db: Pool) => async (addresses: Array<string>)
+: Promise<TypedResultSet<UtxoSumDbResult>> =>
+  (db.query(`SELECT SUM(amount) FROM (${utxoQuery}) as utxo_table`, [addresses]): any)
 
-// Cached queries
 const txHistoryQuery = (limit: number) => `
-  SELECT *
-  FROM "txs"
-  LEFT JOIN (SELECT * from "bestblock" LIMIT 1) f ON true
-  WHERE 
-    hash = ANY (
-      SELECT tx_hash 
-      FROM "tx_addresses"
-      where address = ANY ($1)
-    )
-    AND last_update >= $2
-  ORDER BY last_update ASC
-  LIMIT ${limit}
+  SELECT txs.id as "dbId", txs.hash, txs.block_no, txs.blockHash, txs.block_index as tx_ordinal, txs.time, txs.body::text from (
+      SELECT                                                                                                              
+        tx.id, tx.hash::text, block.block_no, block.hash::text as blockHash, block.time, tx.block_index, tx_body.body::text                  
+        FROM block                                                                                                        
+        INNER JOIN tx ON block.id = tx.block                                                                              
+        INNER JOIN tx_out ON tx.id = tx_out.tx_id
+        JOIN  tx_body ON tx.hash = tx_body.hash                                                                  
+        WHERE tx_out.address = ANY($1)                                                                                    
+          AND block.time >= $2                                                                                  
+    UNION                                                                                                                 
+      SELECT DISTINCT                                                                                                     
+        tx.id, tx.hash::text, block.block_no, block.hash::text as blockHash, block.time, tx.block_index, tx_body.body::text              
+        FROM block                                                                                                        
+        INNER JOIN tx ON block.id = tx.block                                                                              
+        INNER JOIN tx_in ON tx.id = tx_in.tx_in_id                                                                        
+        INNER JOIN tx_out ON (tx_in.tx_out_id = tx_out.tx_id) AND (tx_in.tx_out_index = tx_out.index)    
+        JOIN  tx_body ON tx.hash = tx_body.hash                  
+        WHERE tx_out.address = ANY($1)                                                                                                                                                                       
+          AND block.time >= $2                                                                                      
+    ORDER BY time ASC                                                                                                     
+    LIMIT ${limit}                                                                                                              
+  ) AS txs
 `
 
 /**
@@ -64,62 +104,160 @@ const transactionsHistoryForAddresses = (db: Pool) => async (
   limit: number,
   addresses: Array<string>,
   dateFrom: Date,
-): Promise<ResultSet> => db.query(txHistoryQuery(limit), [addresses, dateFrom])
+): Promise<TypedResultSet<TransactionsHistoryDbResult>> =>
+  (db.query(txHistoryQuery(limit), [addresses, dateFrom]): any)
 
 // The remaining queries should be used only for the purposes of the legacy API!
 
 /**
- * Queries DB looking for successful transactions associated with any of the given addresses.
- * @param {Db Object} db
- * @param {Array<Address>} addresses
- */
-const bulkAddressSummary = (db: Pool) => async (addresses: Array<string>): Promise<ResultSet> =>
-  db.query({
-    text: `SELECT * FROM "txs"
-      WHERE hash = ANY (SELECT tx_hash FROM "tx_addresses" WHERE address = ANY($1))
-      AND tx_state = $2
-      ORDER BY time DESC`,
-    values: [addresses, 'Successful'],
-  })
+* Queries TX table looking for tx by its hash
+* @param {Db Object} db
+* @param {Transaction} tx
+*/
+const getTx = (db: Pool) => async (txHash: string)
+: Promise<TypedResultSet<GetTxDbResult>> =>
+  (db.query({
+    text: 'SELECT id as "dbId", block as "blockId", hash::text FROM "tx" WHERE hash = $1',
+    values: [txHash],
+  }): any)
 
 /**
-* Queries TXS table looking for a successful transaction with a given hash
+* Queries TX_BODY table looking for tx body by its hash
 * @param {Db Object} db
-* @param {*} tx
+* @param {Transaction} tx
 */
-const txSummary = (db: Pool) => async (tx: string): Promise<ResultSet> =>
-  db.query({
-    text: 'SELECT * FROM "txs" WHERE hash = $1 AND tx_state = $2',
-    values: [tx, 'Successful'],
-  })
+const getRawTx = (db: Pool) => async (txHash: string)
+: Promise<TypedResultSet<GetRawTxDbResult>> =>
+  (db.query({
+    text: 'SELECT body::text as tx_body FROM tx_body WHERE hash = $1',
+    values: [txHash],
+  }): any)
+
+/**
+* Queries BLOCK table looking for block with a given id
+* @param {Db Object} db
+* @param {Block} blockId
+*/
+const getBlockById = (db: Pool) => async (blockId: number)
+: Promise<TypedResultSet<GetBlockDbResult>> =>
+  (db.query({
+    text: 'SELECT time, block_no, hash::text FROM block WHERE id = $1',
+    values: [blockId],
+  }): any)
+
+/**
+* Queries TX* tables to get txInputs for a given transaction
+* @param {Db Object} db
+* @param {Transaction} tx
+*/
+const getSingleTxInputs = (db: Pool) => async (txId: number)
+: Promise<TypedResultSet<SingleTxInputDbResult>> =>
+  (db.query({
+    text: `SELECT
+      tx_out.address, tx_out.value
+      FROM tx_out
+      INNER JOIN tx ON tx.id = tx_out.tx_id
+      INNER JOIN tx_in ON tx_in.tx_out_id = tx_out.tx_id AND tx_in.tx_out_index = tx_out.index
+      WHERE tx_in.tx_in_id = $1`,
+    values: [txId],
+  }): any)
+
+/**
+* Queries TX, BLOCK, TX_OUT tables to acquire inward and outward transactions for given addresses
+* @param {Db Object} db
+* @param {Array<Address>} addresses
+*/
+const getTransactions = (db: Pool) => async (addresses: Array<string>)
+: Promise<TypedResultSet<Tx>> =>
+  (db.query({
+    text: `SELECT DISTINCT
+      tx.id as "dbId", tx.hash::text, block.time
+      FROM block 
+      INNER JOIN tx ON block.id = tx.block 
+      INNER JOIN tx_out ON tx.id = tx_out.tx_id
+      WHERE tx_out.address = ANY($1)
+    UNION
+    SELECT DISTINCT 
+      tx.id as "dbId", tx.hash::text, block.time
+      FROM block 
+      INNER JOIN tx ON block.id = tx.block 
+      INNER JOIN tx_in ON tx.id = tx_in.tx_in_id 
+      INNER JOIN tx_out ON (tx_in.tx_out_id = tx_out.tx_id) AND (tx_in.tx_out_index = tx_out.index)
+      WHERE tx_out.address = ANY($1)`,
+    values: [addresses],
+  }): any)
+
+/**
+* Queries TX* tables to acquire bulk tx inputs for given transactions
+* @param {Db Object} db
+* @param {Array<Transaction>} txIds
+*/
+const getTxsInputs = (db: Pool) => async (txIds: Array<number>)
+: Promise<TypedResultSet<TxInput>> =>
+  (db.query({
+    text: `SELECT DISTINCT
+      tx.id as "txDbId", tx_out.address, tx_out.value, tx2.hash::text, tx_out.index, (tx2.size = 0) as "isGenesis"
+      FROM tx
+      INNER JOIN tx_in ON tx.id = tx_in.tx_in_id 
+      INNER JOIN tx_out ON (tx_in.tx_out_id = tx_out.tx_id) AND (tx_in.tx_out_index = tx_out.index) 
+      INNER JOIN tx AS tx2 ON tx2.id = tx_in.tx_out_id
+      WHERE tx_in.tx_in_id = ANY($1)`,
+    values: [txIds],
+  }): any)
+
+/**
+* Queries TX* tables to acquire bulk tx outputs for given transactions
+* @param {Db Object} db
+* @param {Array<Transaction>} txIds
+*/
+const getTxsOutputs = (db: Pool) => async (txIds: Array<number>)
+: Promise<TypedResultSet<TxOutput>> =>
+  (db.query({
+    text: `SELECT
+      tx.id as "txDbId", tx_out.address, tx_out.value, tx_out.index
+      FROM tx 
+      INNER JOIN tx_out ON tx.id = tx_out.tx_id
+      WHERE tx.id = ANY($1)`,
+    values: [txIds],
+  }): any)
 
 /**
  * Queries UTXO table looking for unspents for given addresses and renames the columns
  * @param {Db Object} db
  * @param {Array<Address>} addresses
  */
-const utxoLegacy = (db: Pool) => async (addresses: Array<string>): Promise<ResultSet> =>
-  db.query({
-    text: `SELECT 'CUtxo' AS "tag", tx_hash AS "cuId", tx_index AS "cuOutIndex", receiver AS "cuAddress", amount AS "cuCoins"
-      FROM "utxos"
-      WHERE receiver = ANY($1)`,
+const utxoLegacy = (db: Pool) => async (addresses: Array<string>)
+: Promise<TypedResultSet<UtxoLegacyDbResult>> =>
+  (db.query({
+    text: `SELECT 
+      'CUtxo' AS "tag", tx.hash::text AS "cuId", tx_out.index AS "cuOutIndex", tx_out.address AS "cuAddress", tx_out.value AS "cuCoins"
+      FROM tx
+      INNER JOIN tx_out ON tx.id = tx_out.tx_id
+      WHERE NOT EXISTS (SELECT true
+        FROM tx_in
+        WHERE (tx_out.tx_id = tx_in.tx_out_id) AND (tx_out.index = tx_in.tx_out_index)
+      ) AND (tx_out.address = ANY($1))`,
     values: [addresses],
-  })
+  }): any)
 
 const bestBlock = (db: Pool) => async (): Promise<number> => {
-  const query = await db.query('SELECT * FROM "bestblock"')
-  return query.rows.length > 0 ? parseInt(query.rows[0].best_block_num, 10) : 0
+  const query = await db.query('SELECT block_no FROM block WHERE block_no IS NOT NULL ORDER BY block_no DESC LIMIT 1')
+  return query.rows.length > 0 ? parseInt(query.rows[0].block_no, 10) : 0
 }
 
 export default (db: Pool): DbApi => ({
-  filterUsedAddresses: filterUsedAddresses(db),
-  unspentAddresses: unspentAddresses(db),
-  utxoForAddresses: utxoForAddresses(db),
-  utxoSumForAddresses: utxoSumForAddresses(db),
-  transactionsHistoryForAddresses: transactionsHistoryForAddresses(db),
+  filterUsedAddresses: extractRows(filterUsedAddresses(db)),
+  utxoForAddresses: extractRows(utxoForAddresses(db)),
+  utxoSumForAddresses: extractRows(utxoSumForAddresses(db)),
+  transactionsHistoryForAddresses: extractRows(transactionsHistoryForAddresses(db)),
   bestBlock: bestBlock(db),
-  // legacy
-  bulkAddressSummary: bulkAddressSummary(db),
-  txSummary: txSummary(db),
-  utxoLegacy: utxoLegacy(db),
+  // legacy cardano-db-sync schema
+  utxoLegacy: extractRows(utxoLegacy(db)),
+  getTx: extractRows(getTx(db)),
+  getRawTx: extractRows(getRawTx(db)),
+  getBlockById: extractRows(getBlockById(db)),
+  getSingleTxInputs: extractRows(getSingleTxInputs(db)),
+  getTransactions: extractRows(getTransactions(db)),
+  getTxsInputs: extractRows(getTxsInputs(db)),
+  getTxsOutputs: extractRows(getTxsOutputs(db)),
 })

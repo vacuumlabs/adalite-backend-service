@@ -8,6 +8,5 @@ module.exports = {
     },
     disableHealthcheck: false,
     allowCredentials: false,
-  },
-  cardanoHttpBridgeUrl: 'https://localhost:8300',
+  }
 }

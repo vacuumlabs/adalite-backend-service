@@ -3,6 +3,7 @@ import chai from 'chai'
 import chaiAsPromised from 'chai-as-promised'
 import sinon from 'sinon'
 import Bunyan from 'bunyan'
+import type { UtxoForAddressesDbResult } from 'icarus-backend' // eslint-disable-line
 import { InternalServerError, BadRequestError } from 'restify-errors'
 import packageJson from '../../package.json'
 import routes from '../../build/routes'
@@ -33,16 +34,23 @@ function mockAxiosError(response) {
   return result
 }
 
+const initUtxo = (txHash, txIndex, receiver, amount, blockNum): UtxoForAddressesDbResult => ({
+  tx_hash: txHash,
+  tx_index: txIndex,
+  receiver,
+  amount,
+  block_num: blockNum,
+})
+
 describe('Routes', () => {
-  // This returns fake data. It's ok if they are not real objects (for example utxo or txs)
+  // This returns fake data. It's ok if they are not real objects (for example txs)
   // as we are checking the response is being returned, not the queries
+  // Utxo requires concrete values due to key appending in endpoint functionality
   const dbApi = {
-    filterUsedAddresses: sinon.fake.resolves({ rows: [['a1', 'a2']] }),
-    utxoForAddresses: sinon.fake.resolves({ rows: ['utxo1', 'utxo2'] }),
-    utxoSumForAddresses: sinon.fake.resolves({ rows: [10, 20] }),
-    transactionsHistoryForAddresses: sinon.fake.resolves({
-      rows: ['tx1', 'tx2'],
-    }),
+    filterUsedAddresses: sinon.fake.resolves([['a1', 'a2']]),
+    utxoForAddresses: sinon.fake.resolves([initUtxo('hash1', 0, 'addr1', 100, 1), initUtxo('hash2', 1, 'addr2', 100, 1)]),
+    utxoSumForAddresses: sinon.fake.resolves([10, 20]),
+    transactionsHistoryForAddresses: sinon.fake.resolves(['tx1', 'tx2']),
     unspentAddresses: sinon.fake.resolves([]),
   }
 
@@ -138,7 +146,13 @@ describe('Routes', () => {
       const response = await handler({
         body: { addresses: Array(20).fill('an_address') },
       })
-      return expect(response).to.eql(['utxo1', 'utxo2'])
+      return expect(response).to.eql([{
+        utxo_id: 'hash10',
+        ...initUtxo('hash1', 0, 'addr1', 100, 1),
+      }, {
+        utxo_id: 'hash21',
+        ...initUtxo('hash2', 1, 'addr2', 100, 1),
+      }])
     })
   })
 

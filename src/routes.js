@@ -8,12 +8,17 @@ import type {
   SignedTxRequest,
   DbApi,
   ImporterApi,
+  TxInput,
+  TxOutput,
+  UtxoForAddressesDbResult,
+  TxHistoryEntry,
 } from 'icarus-backend'; // eslint-disable-line
 
 import { InternalServerError, BadRequestError } from 'restify-errors'
 import moment from 'moment'
 import { version } from '../package.json'
 import { getInstanceHealthStatus } from './healthcheck'
+import { unwrapHashPrefix, groupInputsOutputs } from './helpers'
 
 const withPrefix = route => `/api/v2${route}`
 
@@ -65,7 +70,12 @@ const utxoForAddresses = (dbApi: DbApi, { logger, apiConfig }: ServerConfig) => 
   logger.debug('[utxoForAddresses] request is valid')
   const result = await dbApi.utxoForAddresses(req.body.addresses)
   logger.debug('[utxoForAddresses] result calculated')
-  return result.rows
+  return (result.map(row => (
+    {
+      utxo_id: `${row.tx_hash}${row.tx_index}`,
+      ...row,
+    }),
+  ): Array<UtxoForAddressesDbResult>)
 }
 
 /**
@@ -81,7 +91,7 @@ const filterUsedAddresses = (dbApi: DbApi, { logger, apiConfig }: ServerConfig) 
   logger.debug('[filterUsedAddresses] request is valid')
   const result = await dbApi.filterUsedAddresses(req.body.addresses)
   logger.debug('[filterUsedAddresses] result calculated')
-  return result.rows.reduce((acc, row) => acc.concat(row), [])
+  return (result.reduce((acc, row) => acc.concat(row), []): Array<string>)
 }
 
 /**
@@ -96,8 +106,43 @@ const utxoSumForAddresses = (dbApi: DbApi, { logger, apiConfig }: ServerConfig) 
   logger.debug('[utxoSumForAddresses] request is valid')
   const result = await dbApi.utxoSumForAddresses(req.body.addresses)
   logger.debug('[utxoSumForAddresses] result calculated')
-  return result.rows[0]
+  return result[0]
 }
+
+/**
+ * Builds tx entry in the caTxList format
+ * @param {Tx} tx Transaction from database
+ * @param {Array<TxInput>} txInputs Transaction inputs of the tx from database
+ * @param {Array<TxOutput>} txOutputs Transaction outputs of the tx from database
+ * @param {number} bestBlock Most recent block from the database
+ */
+const txHistoryEntry = (
+  tx,
+  txInputs: Array<TxInput>,
+  txOutputs: Array<TxOutput>,
+  bestBlock: number,
+) => ({
+  hash: unwrapHashPrefix(tx.hash),
+  inputs_address: txInputs.map(txInput => txInput.address),
+  inputs_amount: txInputs.map(txInput => txInput.value),
+  outputs_address: txOutputs.map(txOutput => txOutput.address),
+  outputs_amount: txOutputs.map(txOutput => txOutput.value),
+  block_num: `${tx.block_no}`,
+  block_hash: unwrapHashPrefix(tx.blockhash),
+  time: tx.time,
+  tx_state: 'Successful',
+  last_update: tx.time,
+  tx_body: unwrapHashPrefix(tx.body),
+  tx_ordinal: tx.tx_ordinal,
+  inputs: txInputs.map(txInput => ({
+    address: txInput.address,
+    amount: txInput.value,
+    id: `${unwrapHashPrefix(txInput.hash)}${txInput.index}`,
+    index: txInput.index,
+    txHash: unwrapHashPrefix(txInput.hash),
+  })),
+  best_block_num: `${bestBlock}`,
+})
 
 /**
  *
@@ -110,13 +155,20 @@ const transactionsHistory = (dbApi: DbApi, { logger, apiConfig }: ServerConfig) 
   validateAddressesReq(apiConfig.addressesRequestLimit, req.body)
   validateDatetimeReq(req.body)
   logger.debug('[transactionsHistory] request is valid')
-  const result = await dbApi.transactionsHistoryForAddresses(
+  const transactions = await dbApi.transactionsHistoryForAddresses(
     apiConfig.txHistoryResponseLimit,
     req.body.addresses,
     moment(req.body.dateFrom).toDate(),
   )
+  const txIds = transactions.map(tx => tx.dbId)
+  const txInputMap = groupInputsOutputs(await dbApi.getTxsInputs(txIds))
+  const txOutputMap = groupInputsOutputs(await dbApi.getTxsOutputs(txIds))
+  const bestBlock = await dbApi.bestBlock()
+  const txHistory = transactions
+    .map(tx => txHistoryEntry(tx, txInputMap[tx.dbId], txOutputMap[tx.dbId], bestBlock))
+
   logger.debug('[transactionsHistory] result calculated')
-  return result.rows
+  return (txHistory: Array<TxHistoryEntry>)
 }
 
 /**
@@ -135,15 +187,16 @@ const signedTransaction = (
   logger.debug('[signedTransaction] request start')
   let response
   try {
-    response = await importerApi.sendTx(req.body)
+    const tx: string = req.body.signedTx
+    response = await importerApi.sendTx(Buffer.from(tx, 'base64'))
     return response.data
   } catch (err) {
-    if (err.response && err.response.status === 400 && err.response.data) {
+    if (err.response && err.response.status < 500 && err.response.data) {
       throw new BadRequestError(err.response.data)
     }
     logger.error(
       '[signedTransaction] Error while doing request to backend',
-      err,
+      err.message,
     )
     throw new InternalServerError('Unknown Error: Transaction submission failed')
   }

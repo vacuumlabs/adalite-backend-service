@@ -1,16 +1,14 @@
 // @flow
 import type { Pool } from 'pg' // eslint-disable-line
 import { merge } from 'lodash' // eslint-disable-line
-import { Server as WebSocketServer } from 'ws'
 import corsMiddleware from 'restify-cors-middleware'
 import restifyBunyanLogger from 'restify-bunyan-logger'
 import restify from 'restify'
 import config from './config'
 import routes from './routes'
 import legacyRoutes from './legacy-routes'
-import importerApi from './importer-api'
+import importerApi from './tx-submit-api'
 import dbApi from './db-api'
-import manageConnections from './ws-connections'
 import createDB from './db'
 import configCleanup from './cleanup'
 import { healthcheckLoop } from './healthcheck'
@@ -18,7 +16,7 @@ import responseGuard from './middleware/response-guard'
 
 const serverConfig = config.get('server')
 const {
-  logger, importerUrl, disableHealthcheck, corsEnabledFor, allowCredentials,
+  logger, txSubmitApiUrl, disableHealthcheck, corsEnabledFor, allowCredentials,
 } = serverConfig
 
 async function createServer() {
@@ -64,7 +62,7 @@ async function createServer() {
         const result = await handler(
           dbApi(db),
           serverConfig,
-          importerApi(importerUrl),
+          importerApi(txSubmitApiUrl),
         )(req)
         res.send(result)
         next()
@@ -73,9 +71,6 @@ async function createServer() {
       }
     })
   })
-
-  const wss = new WebSocketServer({ server })
-  wss.on('connection', manageConnections(dbApi(db), serverConfig))
 
   configCleanup(db, logger)
 

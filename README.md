@@ -10,7 +10,10 @@ AdaLite Backend Service is based on Project Icarus by IOHK and used by the [AdaL
 
 * NodeJS v8.9.4. We recommend [nvm](https://github.com/creationix/nvm) to install it
 * [Postgres](https://www.postgresql.org/) as DB engine.
-* A database synchronized through [Icarus Importer](https://github.com/Emurgo/project-icarus-importer)
+* [Cardano-rest](https://github.com/input-output-hk/cardano-rest) components
+  * [Cardano-db-sync](https://github.com/input-output-hk/cardano-db-sync) with the extension of [tx bodies](https://github.com/mebassett/cardano-db-sync/pull/1) for pushing data to the database
+  * [Cardano-node](https://github.com/input-output-hk/cardano-node) for acquiring blocks from blockchain
+  * Cardano-submit-api for sending transactions
 
 ## Configuration
 
@@ -25,23 +28,30 @@ They are loaded using [config](https://www.npmjs.com/package/config) package.
 4.  Transpile the source code, `yarn build`
 5.  Start the app, `yarn start`.
 
-In order to connect to the icarus importer DB from local environment, you need to:
+To start cardano-rest services:
+
+1. Create a `~/docker/.env` and set its variables showed in `~/docker/.example.env`
+2. Execute `COMPOSE_PROJECT_NAME=<custom_prefix_to_container_names> docker-compose up`
+
+Note that this starts adalite-backend-service as well, so you can run `docker container stop <adalite-backend-service-container-id>` to stop the backend service running in docker and follow the next steps to start it in console environment.
+
+In order to connect to cardano-rest from local environment, you need to:
 
 1.  Create a `~/.env` file with the necessary environment variables set. E.g.:
 
 ```
-DB_USER=dbUser
+DB_USER=cexplorer
 DB_HOST=dbHost
 DB=dbName
 DB_PASSWORD=password
 DB_PORT=5432
-IMPORTER_URL=<link to your importer service API>
+SUBMIT_API_URL=<link to your cardano-submit-api>
 ```
 2.  Go to the repository's path
 3.  Execute the following command: `yarn start`
 
 ## Production environment
-Docker-compose can be used to run postgres, Icarus importer and the backend service in an isolated environment and to run multiple instances on the same host. Information about importer installation can be found [here](https://github.com/input-output-hk/project-icarus-importer/blob/icarus-master/blockchain-importer/README.md).
+Docker-compose can be used to run postgres, Cardano rest components and the backend service in an isolated environment and to run multiple instances on the same host. 
 In order to start a production instance, you need to:
 
 1. Create a config based on `docker/env.example`, choose an instance name and name it `docker/.env.<instance_name>`
@@ -55,6 +65,17 @@ A healthcheck script is used to guarantee that the database contains the latest 
 ```
 SLACK_TOKEN=slackToken
 SLACK_CHANNEL=slackChannel
+```
+
+## Database migrations
+
+[Knex](https://knexjs.org/#Migrations) is used to handle the migrations. The connection settings are taken from `.env`. `yarn migrate` can be used to update database to latest migration.
+
+Examples of migration commands:
+```
+yarn knex migrate:latest
+yarn knex migrate:rollback
+yarn knex migrate:make $name
 ```
 
 ## Checks & Tests

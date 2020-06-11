@@ -5,7 +5,7 @@ module.exports = {
   server: {
     corsEnabledFor: '*',
     logger: raw(consoleLogger('fatal')),
-    importerUrl: 'https://localhost:8200',
+    txSubmitApiUrl: 'https://localhost:8200/api/txs/signed',
     disableHealthcheck: true,
   },
   db: {

@@ -5,7 +5,10 @@ import { runInServer, assertOnResults } from './test-utils'
 // @flow
 // const shuffle = require('shuffle-array')
 
-const ENDPOINT = '/addresses/filterUsed'
+// To avoid Possible EventEmitter memory leak detected message
+process.setMaxListeners(0)
+
+const ENDPOINT = '/v2/addresses/filterUsed'
 
 describe('FilterUsedAddresses endpoint', () => {
   it('should return empty if addresses do not exist', async () =>
@@ -24,8 +27,8 @@ describe('FilterUsedAddresses endpoint', () => {
 
   it('should return used addresses just once', async () => {
     const usedAddresses = [
-      'DdzFFzCqrht4wFnWC5TJA5UUVE54JC9xZWq589iKyCrWa6hek3KKevyaXzQt6FsdunbkZGzBFQhwZi1MDpijwRoC7kj1MkEPh2Uu5Ssz',
-      'DdzFFzCqrht4wFnWC5TJA5UUVE54JC9xZWq589iKyCrWa6hek3KKevyaXzQt6FsdunbkZGzBFQhwZi1MDpijwRoC7kj1MkEPh2Uu5Ssz',
+      'DdzFFzCqrhsoavpTFBhT1EAo2dDbEr7CcS1925uCTqFbT1B81NdRZcaKM4tyrDfm29iYCym8FJo4BdvSM6rFtmgUCXq6Q8vz718niXp3',
+      'DdzFFzCqrhsoavpTFBhT1EAo2dDbEr7CcS1925uCTqFbT1B81NdRZcaKM4tyrDfm29iYCym8FJo4BdvSM6rFtmgUCXq6Q8vz718niXp3',
     ]
 
     return runInServer(api =>
@@ -39,10 +42,10 @@ describe('FilterUsedAddresses endpoint', () => {
 
   it('should filter unused addresses', async () => {
     const usedAddresses = [
-      'DdzFFzCqrht4wFnWC5TJA5UUVE54JC9xZWq589iKyCrWa6hek3KKevyaXzQt6FsdunbkZGzBFQhwZi1MDpijwRoC7kj1MkEPh2Uu5Ssz',
-      'DdzFFzCqrhtBBX4VvncQ6Zxn8UHawaqSB4jf9EELRBuWUT9gZTmCDWCNTVMotEdof1g26qbrDc8qcHZvtntxR4FaBN1iKxQ5ttjZSZoj',
-      'DdzFFzCqrhsvrpQgsnTxPsCAeEUcGTwxUtBv94F2jGGW8s3ZT7V2xPYBAL4renccQQv6bnVtuSr5a5N6cJuAh8Nw58dzZDJTesodN2kV',
-      'DdzFFzCqrht9eptGZnVrBCcoLn6fWJF4CS1Dvs8KCKutDXgQ9hdNTEPxFqWwfM3gwpVv3zrLQf7dV7xsUpxLPQKGagGX3CscjWeeTEXz',
+      'DdzFFzCqrhszp4fARmEMkgb99btzMKNuYnFMsQHXFZJyDPjPJuu3fi1JHCGgNgLSufYJaP6b7GMtTEprfmSzTQjKqJyneB75y5ABbiSf',
+      'DdzFFzCqrhswkXmoWjcFTDEB3AnAJSqcf7FPsjcesTGfu9zSmCc2Nn2aufdgoQ8zPxQHkdkqfixejHnQejVbm4MQCsd88dCywQqYZEEk',
+      'DdzFFzCqrht7tzd7P6aAWkqiF91p8vLSdBWdnTExD7prn7uojmbDdLVsKBs7hANQDSvGixzVeTTwQXaTqJ4LNLNDkNb69PVqxDZn4fCd',
+      'DdzFFzCqrht2M9W4v5ibT8PjjQCTWh6xSnVwaAGidiGRB1FbF6ZnzKx5V97wXthw5Gfo4L68JJZmNUAWUxjkPXojwHQF9uqxvGeC6wjG',
     ]
 
     const unusedAddresses = [

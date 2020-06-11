@@ -1,7 +1,7 @@
 import shuffle from 'shuffle-array'
 import { runInServer } from './test-utils'
 
-const ENDPOINT = '/txs/utxoSumForAddresses'
+const ENDPOINT = '/v2/txs/utxoSumForAddresses'
 
 describe('UtxoSumForAddresses endpoint', () => {
   it('should return empty if addresses do not exist', async () =>
@@ -20,22 +20,22 @@ describe('UtxoSumForAddresses endpoint', () => {
 
   it('should sum addresses balance once even if sent twice', async () => {
     const usedAddresses = [
-      'DdzFFzCqrht4wFnWC5TJA5UUVE54JC9xZWq589iKyCrWa6hek3KKevyaXzQt6FsdunbkZGzBFQhwZi1MDpijwRoC7kj1MkEPh2Uu5Ssz',
-      'DdzFFzCqrht4wFnWC5TJA5UUVE54JC9xZWq589iKyCrWa6hek3KKevyaXzQt6FsdunbkZGzBFQhwZi1MDpijwRoC7kj1MkEPh2Uu5Ssz',
+      'DdzFFzCqrhswkXmoWjcFTDEB3AnAJSqcf7FPsjcesTGfu9zSmCc2Nn2aufdgoQ8zPxQHkdkqfixejHnQejVbm4MQCsd88dCywQqYZEEk',
+      'DdzFFzCqrhswkXmoWjcFTDEB3AnAJSqcf7FPsjcesTGfu9zSmCc2Nn2aufdgoQ8zPxQHkdkqfixejHnQejVbm4MQCsd88dCywQqYZEEk',
     ]
 
     return runInServer(api =>
       api
         .post(ENDPOINT)
         .send({ addresses: usedAddresses })
-        .expectValue('sum', '621894750')
+        .expectValue('sum', '390053000000')
         .end(),
     )
   })
 
   it('should filter unused addresses', async () => {
     const usedAddresses = [
-      'DdzFFzCqrht4wFnWC5TJA5UUVE54JC9xZWq589iKyCrWa6hek3KKevyaXzQt6FsdunbkZGzBFQhwZi1MDpijwRoC7kj1MkEPh2Uu5Ssz',
+      'DdzFFzCqrhswkXmoWjcFTDEB3AnAJSqcf7FPsjcesTGfu9zSmCc2Nn2aufdgoQ8zPxQHkdkqfixejHnQejVbm4MQCsd88dCywQqYZEEk',
     ]
 
     const unusedAddresses = [
@@ -49,7 +49,7 @@ describe('UtxoSumForAddresses endpoint', () => {
       api
         .post(ENDPOINT)
         .send({ addresses })
-        .expectValue('sum', '621894750')
+        .expectValue('sum', '390053000000')
         .end(),
     )
   })

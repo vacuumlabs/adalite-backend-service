@@ -12,8 +12,7 @@
   },
   "server": {
     "port": "PORT",
-    "importerUrl": "IMPORTER_URL",
+    "txSubmitApiUrl": "SUBMIT_API_URL",
     "corsEnabledFor": "CORS_ENABLED_FOR"
-  },
-  "cardanoHttpBridgeUrl": "CARDANO_BRIDGE_URL"
+  }
 }
