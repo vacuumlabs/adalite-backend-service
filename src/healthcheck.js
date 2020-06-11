@@ -46,7 +46,7 @@ async function txTest(): Promise<boolean> {
     const signedBody = {
       signedTx: Buffer.from(txBody, 'hex').toString('base64'),
     }
-    response = await importer.sendTx(signedBody)
+    response = await importer.sendTx(signedBody) // TODO/hrafn
   } catch (err) {
     if (err.response && err.response.status === 400) {
       return true

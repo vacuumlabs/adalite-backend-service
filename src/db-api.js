@@ -107,8 +107,8 @@ const utxoLegacy = (db: Pool) => async (addresses: Array<string>): Promise<Resul
   })
 
 const bestBlock = (db: Pool) => async (): Promise<number> => {
-  const query = await db.query('SELECT * FROM "bestblock"')
-  return query.rows.length > 0 ? parseInt(query.rows[0].best_block_num, 10) : 0
+  const query = await db.query('SELECT block_no FROM block WHERE block_no IS NOT NULL ORDER BY block_no DESC LIMIT 1')
+  return query.rows.length > 0 ? parseInt(query.rows[0].block_no, 10) : 0
 }
 
 export default (db: Pool): DbApi => ({
