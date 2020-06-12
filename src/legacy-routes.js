@@ -80,25 +80,33 @@ const addressSummary = (dbApi: any, { logger }: ServerConfig) => async (req: any
 const txSummary = (dbApi: any, { logger }: ServerConfig) => async (req: any,
 ) => {
   const { tx } = req.params
-  const result = await dbApi.txSummary(tx)
-  if (result.rows.length === 0) {
-    return { Left: invalidTx }
-  }
-  const row = result.rows[0]
-  const totalInput = arraySum(row.inputs_amount)
-  const totalOutput = arraySum(row.outputs_amount)
+  const getTxResult = await dbApi.getTx(`\\x${tx}`) // TODO/hrafn
+  if (getTxResult.rows.length === 0) return { Left: invalidTx }
+
+  const txRow = getTxResult.rows[0]
+  const getBlockResult = await dbApi.getBlockById(txRow.block)
+  const blockRow = getBlockResult.rows[0]
+
+  const inputsResult = await dbApi.getTxInputs(txRow.id)
+  const outputsResult = await dbApi.getTxOutputs(txRow.id)
+
+  const inputs = inputsResult.rows
+  const outputs = outputsResult.rows
+
+  const totalInput = arraySum(inputs.map(elem => elem.value))
+  const totalOutput = arraySum(outputs.map(elem => elem.value))
   const epoch0 = 1506203091
   const slotSeconds = 20
   const epochSlots = 21600
-  const blockTime = moment(row.time).unix()
+  const blockTime = moment(blockRow.time).unix()
   const right = {
-    ctsId: row.hash,
+    ctsId: txRow.hash.toString('hex'),
     ctsTxTimeIssued: blockTime,
     ctsBlockTimeIssued: blockTime,
-    ctsBlockHeight: Number(row.block_num),
+    ctsBlockHeight: Number(blockRow.block_no),
     ctsBlockEpoch: Math.floor((blockTime - epoch0) / (epochSlots * slotSeconds)),
     ctsBlockSlot: Math.floor((blockTime - epoch0) / slotSeconds) % epochSlots,
-    ctsBlockHash: row.block_hash,
+    ctsBlockHash: blockRow.hash.toString('hex'),
     ctsRelayedBy: null,
     ctsTotalInput: {
       getCoin: `${totalInput}`,
@@ -109,10 +117,10 @@ const txSummary = (dbApi: any, { logger }: ServerConfig) => async (req: any,
     ctsFees: {
       getCoin: `${totalInput.sub(totalOutput)}`,
     },
-    ctsInputs: row.inputs_address.map(
-      (addr, i) => [addr, { getCoin: row.inputs_amount[i] }]),
-    ctsOutputs: row.outputs_address.map(
-      (addr, i) => [addr, { getCoin: row.outputs_amount[i] }]),
+    ctsInputs: inputs.map(
+      input => [input.address, { getCoin: input.value }]),
+    ctsOutputs: outputs.map(
+      output => [output.address, { getCoin: output.value }]),
   }
   logger.debug('[txSummary] result calculated')
   return { Right: right }

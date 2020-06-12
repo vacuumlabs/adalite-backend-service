@@ -94,6 +94,59 @@ const txSummary = (db: Pool) => async (tx: string): Promise<ResultSet> =>
   })
 
 /**
+* TODO
+* @param {Db Object} db
+* @param {*} tx
+*/
+const getTx = (db: Pool) => async (tx: string): Promise<ResultSet> =>
+  db.query({
+    text: 'SELECT * FROM "tx" WHERE hash = $1',
+    values: [tx],
+  })
+
+/**
+* TODO
+* @param {Db Object} db
+* @param {*} tx
+*/
+const getTxOutputs = (db: Pool) => async (tx: string): Promise<ResultSet> =>
+  db.query({
+    text: `SELECT 
+      tx_out.address, tx_out.value, tx.hash, tx_out.index
+      FROM tx
+      INNER JOIN tx_out ON tx.id = tx_out.tx_id
+      WHERE tx_out.tx_id = $1`,
+    values: [tx],
+  })
+
+/**
+* TODO
+* @param {Db Object} db
+* @param {*} blockId
+*/
+const getBlockById = (db: Pool) => async (blockId: string): Promise<ResultSet> =>
+  db.query({
+    text: 'SELECT * FROM block WHERE id = $1',
+    values: [blockId],
+  })
+
+/**
+* TODO
+* @param {Db Object} db
+* @param {*} tx
+*/
+const getTxInputs = (db: Pool) => async (tx: string): Promise<ResultSet> =>
+  db.query({
+    text: `SELECT
+    tx_out.address, tx_out.value, tx.hash, tx_out.index
+    FROM tx_out
+    INNER JOIN tx ON tx.id = tx_out.tx_id
+    INNER JOIN tx_in ON tx_in.tx_out_id = tx_out.tx_id AND tx_in.tx_out_index = tx_out.index
+    WHERE tx_in.tx_in_id = $1`,
+    values: [tx],
+  })
+
+/**
  * Queries UTXO table looking for unspents for given addresses and renames the columns
  * @param {Db Object} db
  * @param {Array<Address>} addresses
@@ -122,4 +175,9 @@ export default (db: Pool): DbApi => ({
   bulkAddressSummary: bulkAddressSummary(db),
   txSummary: txSummary(db),
   utxoLegacy: utxoLegacy(db),
+  // cardano-db-sync schema
+  getTx: getTx(db),
+  getTxOutputs: getTxOutputs(db),
+  getBlockById: getBlockById(db),
+  getTxInputs: getTxInputs(db),
 })
