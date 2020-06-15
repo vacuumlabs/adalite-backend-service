@@ -46,6 +46,18 @@ const txToAddressInfo = (row) => ({
 })
 
 /**
+ * TODO
+ * @param {*} db Database
+ * @param {*} Server Server Config Object
+ */
+const getTxInputsOutputs = async (dbApi: any, { logger }: ServerConfig, txIds: Array<string>,
+) => {
+  const txInputsResult = await dbApi.getDistinctTxInputs(txIds)
+  const txOutputsResult = await dbApi.getDistinctTxOutputs(txIds)
+  return { txInputs: txInputsResult.rows, txOutputs: txOutputsResult.rows }
+}
+
+/**
  * This endpoint returns a summary for a given address
  * @param {*} db Database
  * @param {*} Server Server Config Object
@@ -56,17 +68,37 @@ const addressSummary = (dbApi: any, { logger }: ServerConfig) => async (req: any
   if (!isValidAddress(address)) {
     return { Left: invalidAddress }
   }
-  const result = await dbApi.bulkAddressSummary([address])
-  const transactions = result.rows
+  const inwardTransactionsResult = await dbApi.getInwardTransactions(address)
+  const outwardTransactionsResult = await dbApi.getOutwardTransactions(address)
+
+  console.log(inwardTransactionsResult.rows)
+  console.log(outwardTransactionsResult.rows)
+
+  const inwardTxInputsOutputs = await getTxInputsOutputs(dbApi, logger,
+    inwardTransactionsResult.rows.map(e => e.id))
+  const outwardTxInputsOutputs = await getTxInputsOutputs(dbApi, logger,
+    outwardTransactionsResult.rows.map(e => e.id))
+
+  console.log(inwardTxInputsOutputs)
+  console.log(outwardTxInputsOutputs)
+
+  // const transactions = result.rows
+
+  const totalInput = arraySum(inwardTxInputsOutputs.txOutputs
+    .filter(tx => tx.address === address)
+    .map(tx => tx.value))
+  const totalOutput = arraySum(outwardTxInputsOutputs.txInputs
+    .filter(tx => tx.address === address)
+    .map(tx => tx.value))
 
   const right = {
     caAddress: address,
     caType: 'CPubKeyAddress',
-    caTxNum: transactions.length,
+    // caTxNum: transactions.length,
     caBalance: {
-      getCoin: `${combinedBalance(transactions, [address])}`,
+      getCoin: `${totalInput - totalOutput}`,
     },
-    caTxList: transactions.map(txToAddressInfo),
+    // caTxList: transactions.map(txToAddressInfo),
   }
   logger.debug('[addressSummary] result calculated')
   return { Right: right }

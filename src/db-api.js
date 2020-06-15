@@ -138,12 +138,80 @@ const getBlockById = (db: Pool) => async (blockId: string): Promise<ResultSet> =
 const getTxInputs = (db: Pool) => async (tx: string): Promise<ResultSet> =>
   db.query({
     text: `SELECT
-    tx_out.address, tx_out.value, tx.hash, tx_out.index
-    FROM tx_out
-    INNER JOIN tx ON tx.id = tx_out.tx_id
-    INNER JOIN tx_in ON tx_in.tx_out_id = tx_out.tx_id AND tx_in.tx_out_index = tx_out.index
-    WHERE tx_in.tx_in_id = $1`,
+      tx_out.address, tx_out.value, tx.hash, tx_out.index
+      FROM tx_out
+      INNER JOIN tx ON tx.id = tx_out.tx_id
+      INNER JOIN tx_in ON tx_in.tx_out_id = tx_out.tx_id AND tx_in.tx_out_index = tx_out.index
+      WHERE tx_in.tx_in_id = $1`,
     values: [tx],
+  })
+
+/**
+* TODO
+* @param {Db Object} db
+* @param {*} address
+*/
+const getInwardTransactions = (db: Pool) => async (address: string): Promise<ResultSet> =>
+  db.query({
+    text: `SELECT
+      tx.id, tx.hash::text, block.time
+      FROM block 
+      INNER JOIN tx ON block.id = tx.block 
+      INNER JOIN tx_out ON tx.id = tx_out.tx_id
+      WHERE tx_out.address = $1`,
+    values: [address],
+  })
+
+/**
+* TODO
+* @param {Db Object} db
+* @param {*} address
+*/
+const getOutwardTransactions = (db: Pool) => async (address: string): Promise<ResultSet> =>
+  db.query({
+    text: `SELECT DISTINCT 
+      tx.id, tx.hash::text, block.time
+      FROM block 
+      INNER JOIN tx ON block.id = tx.block 
+      INNER JOIN tx_in ON tx.id = tx_in.tx_in_id 
+      INNER JOIN tx_out ON (tx_in.tx_out_id = tx_out.tx_id) AND (tx_in.tx_out_index = tx_out.index)
+      WHERE tx_out.address = $1`,
+    values: [address],
+  })
+
+// CASE WHEN tx.size=0 THEN TRUE ELSE FALSE END
+//         as isGenesisTx
+
+/**
+* TODO
+* @param {Db Object} db
+* @param {*} tx
+*/
+const getDistinctTxInputs = (db: Pool) => async (txs: Array<string>): Promise<ResultSet> =>
+  db.query({
+    text: `SELECT
+      tx.id, tx_out.address, tx_out.value, tx2.hash::text, tx_out.index, (tx2.size=0) as isGenesisTx
+      FROM tx
+      INNER JOIN tx_in ON tx.id = tx_in.tx_in_id 
+      INNER JOIN tx_out ON (tx_in.tx_out_id = tx_out.tx_id) AND (tx_in.tx_out_index = tx_out.index) 
+      INNER JOIN tx AS tx2 ON tx2.id = tx_in.tx_out_id
+      WHERE tx_in.tx_in_id = ANY($1)`,
+    values: [txs],
+  })
+
+/**
+* TODO
+* @param {Db Object} db
+* @param {*} tx
+*/
+const getDistinctTxOutputs = (db: Pool) => async (txs: Array<string>): Promise<ResultSet> =>
+  db.query({
+    text: `SELECT
+      tx.id, tx_out.address, tx_out.value, tx.hash::text, tx_out.index
+      FROM tx 
+      INNER JOIN tx_out ON tx.id = tx_out.tx_id
+      WHERE tx.id = ANY($1)`,
+    values: [txs],
   })
 
 /**
@@ -180,4 +248,8 @@ export default (db: Pool): DbApi => ({
   getTxOutputs: getTxOutputs(db),
   getBlockById: getBlockById(db),
   getTxInputs: getTxInputs(db),
+  getInwardTransactions: getInwardTransactions(db),
+  getOutwardTransactions: getOutwardTransactions(db),
+  getDistinctTxInputs: getDistinctTxInputs(db),
+  getDistinctTxOutputs: getDistinctTxOutputs(db),
 })
