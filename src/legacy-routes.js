@@ -3,7 +3,6 @@
 import { isValidAddress } from 'cardano-crypto.js'
 import moment from 'moment'
 import Big from 'big.js'
-import { zip, nth } from 'lodash'
 
 import type {
   ServerConfig,
@@ -17,38 +16,6 @@ const invalidAddress = 'Invalid Cardano address!'
 const invalidTx = 'Invalid transaction id!'
 
 const arraySum = (numbers) => numbers.reduce((acc, val) => acc.plus(Big(val)), Big(0))
-
-/**
- * Helper function that takes movements for various addresses and a set of addresses we are
- * interested in. The sum of movements for addresses we are interested in is returned.
-*/
-const txAddressCoins = (addresses, amounts, addressSet) => arraySum(zip(addresses, amounts)
-  .filter((pair) => addressSet.has(pair[0]))
-  .map((pair) => nth(pair, 1)))
-
-const combinedBalance = (transactions, addresses) => {
-  const addressSet = new Set(addresses)
-  const totalIn = transactions.reduce((acc, tx) =>
-    acc.plus(txAddressCoins(tx.outputs_address, tx.outputs_amount, addressSet)), Big(0))
-  const totalOut = transactions.reduce((acc, tx) =>
-    acc.plus(txAddressCoins(tx.inputs_address, tx.inputs_amount, addressSet)), Big(0))
-  return totalIn.sub(totalOut)
-}
-
-const txToAddressInfo = (row) => ({
-  ctbId: row.hash,
-  ctbTimeIssued: moment(row.time).unix(),
-  ctbInputs: row.inputs_address.map(
-    (addr, i) => [addr, { getCoin: row.inputs_amount[i] }]),
-  ctbOutputs: row.outputs_address.map(
-    (addr, i) => [addr, { getCoin: row.outputs_amount[i] }]),
-  ctbInputSum: {
-    getCoin: `${arraySum(row.inputs_amount)}`,
-  },
-  ctbOutputSum: {
-    getCoin: `${arraySum(row.outputs_amount)}`,
-  },
-})
 
 /**
  * TODO
@@ -116,8 +83,8 @@ const addressSummary = (dbApi: any, { logger }: ServerConfig) => async (req: any
   if (!isValidAddress(address)) {
     return { Left: invalidAddress }
   }
-  const inTxsRes = await dbApi.getInwardTransactions(address)
-  const outTxsRes = await dbApi.getOutwardTransactions(address)
+  const inTxsRes = await dbApi.getInwardTransactions([address])
+  const outTxsRes = await dbApi.getOutwardTransactions([address])
 
   const inTxs = inTxsRes.rows
   const outTxs = outTxsRes.rows
@@ -137,7 +104,7 @@ const addressSummary = (dbApi: any, { logger }: ServerConfig) => async (req: any
     caType: 'CPubKeyAddress',
     caTxNum: caTxList.length,
     caBalance: {
-      getCoin: `${totalInput - totalOutput}`,
+      getCoin: `${totalInput.sub(totalOutput)}`,
     },
     caTxList,
   }
@@ -257,16 +224,31 @@ const bulkAddressSummary = (dbApi: any, { logger, apiConfig }: ServerConfig) => 
   if (addresses.some((addr) => !isValidAddress(addr))) {
     return { Left: invalidAddress }
   }
-  const txList = await dbApi.bulkAddressSummary(addresses)
-  const transactions = txList.rows
 
+  const inTxsRes = await dbApi.getInwardTransactions(addresses)
+  const outTxsRes = await dbApi.getOutwardTransactions(addresses)
+
+  const inTxs = inTxsRes.rows
+  const outTxs = outTxsRes.rows
+  const inTxMovements = await getTxMovements(dbApi, inTxs.map(tx => tx.id))
+  const outTxMovements = await getTxMovements(dbApi, outTxs.map(tx => tx.id))
+
+  const txMovements = {
+    txInputs: [...inTxMovements.txInputs, ...outTxMovements.txInputs],
+    txOutputs: [...inTxMovements.txOutputs, ...outTxMovements.txOutputs],
+  }
+  const caTxList = buildTxList([...inTxs, ...outTxs], txMovements)
+  const addressSet = new Set(addresses)
+  const totalInput = sumTxs(inTxMovements.txOutputs, addressSet)
+  const totalOutput = sumTxs(outTxMovements.txInputs, addressSet)
   const right = {
-    caAddresses: addresses,
-    caTxNum: transactions.length,
+    caAddress: addresses,
+    caType: 'CPubKeyAddress',
+    caTxNum: caTxList.length,
     caBalance: {
-      getCoin: `${combinedBalance(transactions, addresses)}`,
+      getCoin: `${totalInput.sub(totalOutput)}`,
     },
-    caTxList: transactions.map(txToAddressInfo),
+    caTxList,
   }
   logger.debug('[bulkAddressSummary] result calculated')
   return { Right: right }

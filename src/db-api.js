@@ -151,15 +151,15 @@ const getTxInputs = (db: Pool) => async (tx: string): Promise<ResultSet> =>
 * @param {Db Object} db
 * @param {*} address
 */
-const getInwardTransactions = (db: Pool) => async (address: string): Promise<ResultSet> =>
+const getInwardTransactions = (db: Pool) => async (addresses: Array<string>): Promise<ResultSet> =>
   db.query({
     text: `SELECT
       tx.id, tx.hash::text, block.time
       FROM block 
       INNER JOIN tx ON block.id = tx.block 
       INNER JOIN tx_out ON tx.id = tx_out.tx_id
-      WHERE tx_out.address = $1`,
-    values: [address],
+      WHERE tx_out.address = ANY($1)`,
+    values: [addresses],
   })
 
 /**
@@ -167,7 +167,7 @@ const getInwardTransactions = (db: Pool) => async (address: string): Promise<Res
 * @param {Db Object} db
 * @param {*} address
 */
-const getOutwardTransactions = (db: Pool) => async (address: string): Promise<ResultSet> =>
+const getOutwardTransactions = (db: Pool) => async (addresses: Array<string>): Promise<ResultSet> =>
   db.query({
     text: `SELECT DISTINCT 
       tx.id, tx.hash::text, block.time
@@ -175,8 +175,8 @@ const getOutwardTransactions = (db: Pool) => async (address: string): Promise<Re
       INNER JOIN tx ON block.id = tx.block 
       INNER JOIN tx_in ON tx.id = tx_in.tx_in_id 
       INNER JOIN tx_out ON (tx_in.tx_out_id = tx_out.tx_id) AND (tx_in.tx_out_index = tx_out.index)
-      WHERE tx_out.address = $1`,
-    values: [address],
+      WHERE tx_out.address = ANY($1)`,
+    values: [addresses],
   })
 
 // CASE WHEN tx.size=0 THEN TRUE ELSE FALSE END
