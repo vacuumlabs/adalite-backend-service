@@ -5,7 +5,12 @@ import moment from 'moment'
 import Big from 'big.js'
 import { zip, nth } from 'lodash'
 
-import type { ServerConfig } from 'icarus-backend'; // eslint-disable-line
+import type {
+  ServerConfig,
+  Movement,
+  MovementEntry,
+  TxEntry,
+} from 'icarus-backend'; // eslint-disable-line
 
 const withPrefix = route => `/api${route}`
 const invalidAddress = 'Invalid Cardano address!'
@@ -58,7 +63,7 @@ const getTxMovements = async (
   return { txInputs: txInputsResult.rows, txOutputs: txOutputsResult.rows }
 }
 
-const initializeTxEntry = (tx) => ({
+const initializeTxEntry = (tx) : TxEntry => ({
   ctbId: tx.hash.substr(2), // TODO/hrafn \x format
   ctbTimeIssued: moment(tx.time).unix(), // TODO/hrafn db time of by an hour
   ctbInputs: [],
@@ -67,24 +72,33 @@ const initializeTxEntry = (tx) => ({
   ctbOutputSum: { getCoin: Big(0) },
 })
 
+const initializeMovementEntry = (tx: Movement) : MovementEntry => [
+  tx.address, { getCoin: tx.value },
+]
 
-const movementEntry = (tx) => [tx.address, { getCoin: tx.value }]
+const pushMovementToTxMap = (
+  txMap: Map<number, TxEntry>, movement: Movement, isInput: boolean,
+) : void => {
+  const txEntry = txMap.get(movement.txid)
+  if (!txEntry) { return }
 
-const buildTxList = (transactions: Array<Object>, movements: Array<Object>) => {
+  if (isInput) {
+    txEntry.ctbInputs.push(initializeMovementEntry(movement))
+    txEntry.ctbInputSum.getCoin = txEntry.ctbInputSum.getCoin.plus(movement.value)
+  } else {
+    txEntry.ctbOutputs.push(initializeMovementEntry(movement))
+    txEntry.ctbOutputSum.getCoin = txEntry.ctbOutputSum.getCoin.plus(movement.value)
+  }
+}
+
+const buildTxList = (transactions: Array<Object>, movements) => {
   const txMap = new Map(transactions.map(tx => [tx.id, initializeTxEntry(tx)]))
-  movements.txInputs.forEach(txInput => {
-    const txEntry = txMap.get(txInput.txid)
-    txEntry.ctbInputs.push(movementEntry(txInput))
-    txEntry.ctbInputSum.getCoin = txEntry.ctbInputSum.getCoin.plus(txInput.value)
-  })
+  movements.txInputs.forEach(txInput => pushMovementToTxMap(txMap, txInput, true))
+  movements.txOutputs.forEach(txOutput => pushMovementToTxMap(txMap, txOutput, false))
 
-  movements.txOutputs.forEach(txOutput => {
-    const txEntry = txMap.get(txOutput.txid)
-    txEntry.ctbOutputs.push(movementEntry(txOutput))
-    txEntry.ctbOutputSum.getCoin = txEntry.ctbOutputSum.getCoin.plus(txOutput.value)
-  })
-
-  return [...txMap.values()].sort((a, b) => b.ctbTimeIssued - a.ctbTimeIssued)
+  const txList: Array<TxEntry> = [...txMap.values()]
+    .sort((a, b) => b.ctbTimeIssued - a.ctbTimeIssued)
+  return txList
 }
 
 const sumTxs = (txs, addressSet) => arraySum(txs

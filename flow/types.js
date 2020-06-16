@@ -60,4 +60,26 @@ declare module 'icarus-backend' {
     status: number,
     data: any
   }
+
+  // either txInput or txOutput
+  declare type Movement = {
+    txid: number,
+    address: string,
+    value: number,
+  }
+
+  declare type MovementEntry = Array<any>
+
+  declare type CoinObject = {
+    getCoin: Big
+  }
+
+  declare type TxEntry = {
+    ctbId: string,
+    ctbTimeIssued: moment,
+    ctbInputs: Array<MovementEntry>,
+    ctbOutputs: Array<MovementEntry>,
+    ctbInputSum: CoinObject,
+    ctbOutputSum: CoinObject,
+  }
 }
