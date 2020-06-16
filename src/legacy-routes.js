@@ -72,19 +72,11 @@ const sumTxs = (txs, addressSet) => arraySum(txs
   .filter(tx => addressSet.has(tx.address))
   .map(tx => tx.value))
 
-/**
- * This endpoint returns a summary for a given address
- * @param {*} db Database
- * @param {*} Server Server Config Object
- */
-const addressSummary = (dbApi: any, { logger }: ServerConfig) => async (req: any,
+const getAddressSummaryForAddresses = async (
+  dbApi: any, addresses: Array<string>,
 ) => {
-  const { address } = req.params
-  if (!isValidAddress(address)) {
-    return { Left: invalidAddress }
-  }
-  const inTxsRes = await dbApi.getInwardTransactions([address])
-  const outTxsRes = await dbApi.getOutwardTransactions([address])
+  const inTxsRes = await dbApi.getInwardTransactions(addresses)
+  const outTxsRes = await dbApi.getOutwardTransactions(addresses)
 
   const inTxs = inTxsRes.rows
   const outTxs = outTxsRes.rows
@@ -96,20 +88,39 @@ const addressSummary = (dbApi: any, { logger }: ServerConfig) => async (req: any
     txOutputs: [...inTxMovements.txOutputs, ...outTxMovements.txOutputs],
   }
   const caTxList = buildTxList([...inTxs, ...outTxs], txMovements)
-  const addressSet = new Set([address])
+  const addressSet = new Set(addresses)
   const totalInput = sumTxs(inTxMovements.txOutputs, addressSet)
   const totalOutput = sumTxs(outTxMovements.txInputs, addressSet)
-  const right = {
-    caAddress: address,
-    caType: 'CPubKeyAddress',
+
+  return {
     caTxNum: caTxList.length,
     caBalance: {
       getCoin: `${totalInput.sub(totalOutput)}`,
     },
     caTxList,
   }
+}
+
+/**
+ * This endpoint returns a summary for a given address
+ * @param {*} db Database
+ * @param {*} Server Server Config Object
+ */
+const addressSummary = (dbApi: any, { logger }: ServerConfig) => async (req: any,
+) => {
+  const { address } = req.params
+  if (!isValidAddress(address)) {
+    return { Left: invalidAddress }
+  }
+  const right = await getAddressSummaryForAddresses(dbApi, [address])
   logger.debug('[addressSummary] result calculated')
-  return { Right: right }
+  return {
+    Right: {
+      caAddress: address,
+      caType: 'CPubKeyAddress',
+      ...right,
+    },
+  }
 }
 
 /**
@@ -224,34 +235,9 @@ const bulkAddressSummary = (dbApi: any, { logger, apiConfig }: ServerConfig) => 
   if (addresses.some((addr) => !isValidAddress(addr))) {
     return { Left: invalidAddress }
   }
-
-  const inTxsRes = await dbApi.getInwardTransactions(addresses)
-  const outTxsRes = await dbApi.getOutwardTransactions(addresses)
-
-  const inTxs = inTxsRes.rows
-  const outTxs = outTxsRes.rows
-  const inTxMovements = await getTxMovements(dbApi, inTxs.map(tx => tx.id))
-  const outTxMovements = await getTxMovements(dbApi, outTxs.map(tx => tx.id))
-
-  const txMovements = {
-    txInputs: [...inTxMovements.txInputs, ...outTxMovements.txInputs],
-    txOutputs: [...inTxMovements.txOutputs, ...outTxMovements.txOutputs],
-  }
-  const caTxList = buildTxList([...inTxs, ...outTxs], txMovements)
-  const addressSet = new Set(addresses)
-  const totalInput = sumTxs(inTxMovements.txOutputs, addressSet)
-  const totalOutput = sumTxs(outTxMovements.txInputs, addressSet)
-  const right = {
-    caAddress: addresses,
-    caType: 'CPubKeyAddress',
-    caTxNum: caTxList.length,
-    caBalance: {
-      getCoin: `${totalInput.sub(totalOutput)}`,
-    },
-    caTxList,
-  }
+  const right = await getAddressSummaryForAddresses(dbApi, addresses)
   logger.debug('[bulkAddressSummary] result calculated')
-  return { Right: right }
+  return { Right: { caAddresses: addresses, ...right } }
 }
 
 export default {
