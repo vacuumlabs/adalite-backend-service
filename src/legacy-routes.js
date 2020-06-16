@@ -50,12 +50,46 @@ const txToAddressInfo = (row) => ({
  * @param {*} db Database
  * @param {*} Server Server Config Object
  */
-const getTxInputsOutputs = async (dbApi: any, { logger }: ServerConfig, txIds: Array<string>,
+const getTxMovements = async (
+  dbApi: any, txIds: Array<string>,
 ) => {
   const txInputsResult = await dbApi.getDistinctTxInputs(txIds)
   const txOutputsResult = await dbApi.getDistinctTxOutputs(txIds)
   return { txInputs: txInputsResult.rows, txOutputs: txOutputsResult.rows }
 }
+
+const initializeTxEntry = (tx) => ({
+  ctbId: tx.hash.substr(2), // TODO/hrafn \x format
+  ctbTimeIssued: moment(tx.time).unix(), // TODO/hrafn db time of by an hour
+  ctbInputs: [],
+  ctbOutputs: [],
+  ctbInputSum: { getCoin: Big(0) },
+  ctbOutputSum: { getCoin: Big(0) },
+})
+
+
+const movementEntry = (tx) => [tx.address, { getCoin: tx.value }]
+
+const buildTxList = (transactions: Array<Object>, movements: Array<Object>) => {
+  const txMap = new Map(transactions.map(tx => [tx.id, initializeTxEntry(tx)]))
+  movements.txInputs.forEach(txInput => {
+    const txEntry = txMap.get(txInput.txid)
+    txEntry.ctbInputs.push(movementEntry(txInput))
+    txEntry.ctbInputSum.getCoin = txEntry.ctbInputSum.getCoin.plus(txInput.value)
+  })
+
+  movements.txOutputs.forEach(txOutput => {
+    const txEntry = txMap.get(txOutput.txid)
+    txEntry.ctbOutputs.push(movementEntry(txOutput))
+    txEntry.ctbOutputSum.getCoin = txEntry.ctbOutputSum.getCoin.plus(txOutput.value)
+  })
+
+  return [...txMap.values()].sort((a, b) => b.ctbTimeIssued - a.ctbTimeIssued)
+}
+
+const sumTxs = (txs, addressSet) => arraySum(txs
+  .filter(tx => addressSet.has(tx.address))
+  .map(tx => tx.value))
 
 /**
  * This endpoint returns a summary for a given address
@@ -68,37 +102,30 @@ const addressSummary = (dbApi: any, { logger }: ServerConfig) => async (req: any
   if (!isValidAddress(address)) {
     return { Left: invalidAddress }
   }
-  const inwardTransactionsResult = await dbApi.getInwardTransactions(address)
-  const outwardTransactionsResult = await dbApi.getOutwardTransactions(address)
+  const inTxsRes = await dbApi.getInwardTransactions(address)
+  const outTxsRes = await dbApi.getOutwardTransactions(address)
 
-  console.log(inwardTransactionsResult.rows)
-  console.log(outwardTransactionsResult.rows)
+  const inTxs = inTxsRes.rows
+  const outTxs = outTxsRes.rows
+  const inTxMovements = await getTxMovements(dbApi, inTxs.map(tx => tx.id))
+  const outTxMovements = await getTxMovements(dbApi, outTxs.map(tx => tx.id))
 
-  const inwardTxInputsOutputs = await getTxInputsOutputs(dbApi, logger,
-    inwardTransactionsResult.rows.map(e => e.id))
-  const outwardTxInputsOutputs = await getTxInputsOutputs(dbApi, logger,
-    outwardTransactionsResult.rows.map(e => e.id))
-
-  console.log(inwardTxInputsOutputs)
-  console.log(outwardTxInputsOutputs)
-
-  // const transactions = result.rows
-
-  const totalInput = arraySum(inwardTxInputsOutputs.txOutputs
-    .filter(tx => tx.address === address)
-    .map(tx => tx.value))
-  const totalOutput = arraySum(outwardTxInputsOutputs.txInputs
-    .filter(tx => tx.address === address)
-    .map(tx => tx.value))
-
+  const txMovements = {
+    txInputs: [...inTxMovements.txInputs, ...outTxMovements.txInputs],
+    txOutputs: [...inTxMovements.txOutputs, ...outTxMovements.txOutputs],
+  }
+  const caTxList = buildTxList([...inTxs, ...outTxs], txMovements)
+  const addressSet = new Set([address])
+  const totalInput = sumTxs(inTxMovements.txOutputs, addressSet)
+  const totalOutput = sumTxs(outTxMovements.txInputs, addressSet)
   const right = {
     caAddress: address,
     caType: 'CPubKeyAddress',
-    // caTxNum: transactions.length,
+    caTxNum: caTxList.length,
     caBalance: {
       getCoin: `${totalInput - totalOutput}`,
     },
-    // caTxList: transactions.map(txToAddressInfo),
+    caTxList,
   }
   logger.debug('[addressSummary] result calculated')
   return { Right: right }
