@@ -151,13 +151,13 @@ const txSummary = (dbApi: any, { logger }: ServerConfig) => async (req: any,
   const epochSlots = 21600
   const blockTime = moment(blockRow.time).unix()
   const right = {
-    ctsId: txRow.hash.toString('hex'),
+    ctsId: txRow.hash.substr(2), // TODO/hrafn \x format,
     ctsTxTimeIssued: blockTime,
     ctsBlockTimeIssued: blockTime,
     ctsBlockHeight: Number(blockRow.block_no),
     ctsBlockEpoch: Math.floor((blockTime - epoch0) / (epochSlots * slotSeconds)),
     ctsBlockSlot: Math.floor((blockTime - epoch0) / slotSeconds) % epochSlots,
-    ctsBlockHash: blockRow.hash.toString('hex'),
+    ctsBlockHash: blockRow.hash.substr(2), // TODO/hrafn \x format,
     ctsRelayedBy: null,
     ctsTotalInput: {
       getCoin: `${totalInput}`,
