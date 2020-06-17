@@ -213,6 +213,7 @@ const unspentTxOutputs = (dbApi: any, { logger, apiConfig }: ServerConfig) => as
     const coins = row.cuCoins
     const newRow = row
     newRow.cuCoins = { getCoin: coins }
+    newRow.cuId = row.cuId.substr(2) // TODO/hrafn \x format
     return newRow
   })
   logger.debug('[unspentTxOutputs] result calculated')

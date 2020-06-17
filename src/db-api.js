@@ -179,9 +179,6 @@ const getOutwardTransactions = (db: Pool) => async (addresses: Array<string>): P
     values: [addresses],
   })
 
-// CASE WHEN tx.size=0 THEN TRUE ELSE FALSE END
-//         as isGenesisTx
-
 /**
 * TODO
 * @param {Db Object} db
@@ -221,9 +218,14 @@ const getDistinctTxOutputs = (db: Pool) => async (txs: Array<string>): Promise<R
  */
 const utxoLegacy = (db: Pool) => async (addresses: Array<string>): Promise<ResultSet> =>
   db.query({
-    text: `SELECT 'CUtxo' AS "tag", tx_hash AS "cuId", tx_index AS "cuOutIndex", receiver AS "cuAddress", amount AS "cuCoins"
-      FROM "utxos"
-      WHERE receiver = ANY($1)`,
+    text: `SELECT 
+      'CUtxo' AS "tag", tx.hash::text AS "cuId", tx_out.index AS "cuOutIndex", tx_out.address AS "cuAddress", tx_out.value AS "cuCoins"
+      FROM tx
+      INNER JOIN tx_out ON tx.id = tx_out.tx_id
+      WHERE NOT EXISTS (SELECT true
+        FROM tx_in
+        WHERE (tx_out.tx_id = tx_in.tx_out_id) AND (tx_out.index = tx_in.tx_out_index)
+      ) AND (tx_out.address = ANY($1))`,
     values: [addresses],
   })
 
