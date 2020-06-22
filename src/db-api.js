@@ -186,7 +186,7 @@ const getOutwardTransactions = (db: Pool) => async (addresses: Array<string>): P
 */
 const getDistinctTxInputs = (db: Pool) => async (txs: Array<string>): Promise<ResultSet> =>
   db.query({
-    text: `SELECT
+    text: `SELECT DISTINCT
       tx.id as txId, tx_out.address, tx_out.value
       FROM tx
       INNER JOIN tx_in ON tx.id = tx_in.tx_in_id 

@@ -31,7 +31,7 @@ const getTxMovements = async (
 }
 
 const initializeTxEntry = (tx) : TxEntry => ({
-  ctbId: tx.hash.substr(2), // TODO/hrafn \x format
+  ctbId: tx.hash, // TODO/hrafn \x format
   ctbTimeIssued: moment(tx.time).unix(), // TODO/hrafn db time of by an hour
   ctbInputs: [],
   ctbOutputs: [],
@@ -131,7 +131,7 @@ const addressSummary = (dbApi: any, { logger }: ServerConfig) => async (req: any
 const txSummary = (dbApi: any, { logger }: ServerConfig) => async (req: any,
 ) => {
   const { tx } = req.params
-  const getTxResult = await dbApi.getTx(`\\x${tx}`) // TODO/hrafn
+  const getTxResult = await dbApi.getTx(tx) // TODO/hrafn
   if (getTxResult.rows.length === 0) return { Left: invalidTx }
 
   const txRow = getTxResult.rows[0]
@@ -151,13 +151,13 @@ const txSummary = (dbApi: any, { logger }: ServerConfig) => async (req: any,
   const epochSlots = 21600
   const blockTime = moment(blockRow.time).unix()
   const right = {
-    ctsId: txRow.hash.substr(2), // TODO/hrafn \x format,
+    ctsId: txRow.hash, // TODO/hrafn \x format,
     ctsTxTimeIssued: blockTime,
     ctsBlockTimeIssued: blockTime,
     ctsBlockHeight: Number(blockRow.block_no),
     ctsBlockEpoch: Math.floor((blockTime - epoch0) / (epochSlots * slotSeconds)),
     ctsBlockSlot: Math.floor((blockTime - epoch0) / slotSeconds) % epochSlots,
-    ctsBlockHash: blockRow.hash.substr(2), // TODO/hrafn \x format,
+    ctsBlockHash: blockRow.hash, // TODO/hrafn \x format,
     ctsRelayedBy: null,
     ctsTotalInput: {
       getCoin: `${totalInput}`,
@@ -213,7 +213,7 @@ const unspentTxOutputs = (dbApi: any, { logger, apiConfig }: ServerConfig) => as
     const coins = row.cuCoins
     const newRow = row
     newRow.cuCoins = { getCoin: coins }
-    newRow.cuId = row.cuId.substr(2) // TODO/hrafn \x format
+    newRow.cuId = row.cuId // TODO/hrafn \x format
     return newRow
   })
   logger.debug('[unspentTxOutputs] result calculated')
