@@ -80,17 +80,18 @@ const getAddressSummaryForAddresses = async (
 
   const inTxs = inTxsRes.rows
   const outTxs = outTxsRes.rows
-  const inTxMovements = await getTxMovements(dbApi, inTxs.map(tx => tx.id))
-  const outTxMovements = await getTxMovements(dbApi, outTxs.map(tx => tx.id))
 
-  const txMovements = {
-    txInputs: [...inTxMovements.txInputs, ...outTxMovements.txInputs],
-    txOutputs: [...inTxMovements.txOutputs, ...outTxMovements.txOutputs],
-  }
+  const uniqueTxIds = [...new Set([
+    ...inTxsRes.rows.map(tx => tx.id),
+    ...outTxsRes.rows.map(tx => tx.id),
+  ])]
+
+  const txMovements = await getTxMovements(dbApi, uniqueTxIds)
   const caTxList = buildTxList([...inTxs, ...outTxs], txMovements)
+
   const addressSet = new Set(addresses)
-  const totalInput = sumTxs(inTxMovements.txOutputs, addressSet)
-  const totalOutput = sumTxs(outTxMovements.txInputs, addressSet)
+  const totalInput = sumTxs(txMovements.txOutputs, addressSet)
+  const totalOutput = sumTxs(txMovements.txInputs, addressSet)
 
   return {
     caTxNum: caTxList.length,
