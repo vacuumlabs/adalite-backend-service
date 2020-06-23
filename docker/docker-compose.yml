@@ -81,7 +81,7 @@ services:
       - POSTGRES_USER=cexplorer
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     ports:
-      - 8100:8100
+      - ${ADALITE_CARDANO_EXPLORER_HOST_PORT}:8100
     restart: on-failure
 
   cardano-submit-api:
@@ -93,7 +93,7 @@ services:
     volumes:
       - ${DATA_PATH}/node-ipc:/node-ipc
     ports:
-      - ${ADALITE_SUBMIT_API_PORT}:8080
+      - ${ADALITE_SUBMIT_API_HOST_PORT}:8080
     restart: on-failure
 
 volumes:
