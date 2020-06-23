@@ -22,7 +22,7 @@ services:
       DB_PORT: 5432
       DB_HOST: postgres
       DB_PASSWORD: ${POSTGRES_PASSWORD}
-      DB_USER: ${POSTGRES_USER}
+      DB_USER: cexplorer
       CORS_ENABLED_FOR: ${CORS_ENABLED_FOR}
       IMPORTER_ENDPOINT: http://localhost:8101/api/submit/tx # TODO/hrafn
       SLACK_TOKEN: ${SLACK_TOKEN}
@@ -36,7 +36,7 @@ services:
     environment:
       - POSTGRES_LOGGING=true
       - POSTGRES_DB=${POSTGRES_DB}
-      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_USER=cexplorer
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     volumes:
       - ${DATA_PATH}/postgres:/var/lib/postgresql/data
@@ -57,13 +57,16 @@ services:
       - POSTGRES_HOST=postgres
       - POSTGRES_PORT=5432
       - POSTGRES_DB=${POSTGRES_DB}
-      - POSTGRES_USER=${POSTGRES_USER}
+      # "As of today, it is absolutely mandatory for the postgres_user to be defined as cexplorer"
+      # quoted from https://github.com/input-output-hk/cardano-rest/wiki/Docker
+      - POSTGRES_USER=cexplorer
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     depends_on:
       - cardano-node
       - postgres
     volumes:
       - ${DATA_PATH}/node-ipc:/node-ipc
+      - ${DATA_PATH}/db-sync-tmp:/tmp
     restart: on-failure
 
   cardano-explorer-api: # TODO: remove, not used outside testing
@@ -75,7 +78,7 @@ services:
       - POSTGRES_HOST=postgres
       - POSTGRES_PORT=5432
       - POSTGRES_DB=${POSTGRES_DB}
-      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_USER=cexplorer
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     ports:
       - 8100:8100
@@ -90,7 +93,7 @@ services:
     volumes:
       - ${DATA_PATH}/node-ipc:/node-ipc
     ports:
-      - 8101:8101
+      - ${ADALITE_SUBMIT_API_PORT}:8080
     restart: on-failure
 
 volumes:
