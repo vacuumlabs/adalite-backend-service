@@ -105,21 +105,6 @@ const getTx = (db: Pool) => async (tx: string): Promise<ResultSet> =>
   })
 
 /**
-* TODO: MERGE
-* @param {Db Object} db
-* @param {*} tx
-*/
-const getTxOutputs = (db: Pool) => async (tx: string): Promise<ResultSet> =>
-  db.query({
-    text: `SELECT 
-      tx_out.address, tx_out.value
-      FROM tx
-      INNER JOIN tx_out ON tx.id = tx_out.tx_id
-      WHERE tx_out.tx_id = $1`,
-    values: [tx],
-  })
-
-/**
 * Queries BLOCK table looking for block with a given id
 * @param {Db Object} db
 * @param {*} blockId
@@ -247,7 +232,6 @@ export default (db: Pool): DbApi => ({
   utxoLegacy: utxoLegacy(db),
   // cardano-db-sync schema
   getTx: getTx(db),
-  getTxOutputs: getTxOutputs(db),
   getBlockById: getBlockById(db),
   getTxInputs: getTxInputs(db),
   getInwardTransactions: getInwardTransactions(db),

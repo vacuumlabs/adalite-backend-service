@@ -169,7 +169,7 @@ const txSummary = (dbApi: any, { logger }: ServerConfig) => async (req: any,
   const blockRow = getBlockResult.rows[0]
 
   const inputsResult = await dbApi.getTxInputs(txRow.id)
-  const outputsResult = await dbApi.getTxOutputs(txRow.id)
+  const outputsResult = await dbApi.getDistinctTxOutputs([txRow.id])
 
   const inputs = inputsResult.rows
   const outputs = outputsResult.rows
