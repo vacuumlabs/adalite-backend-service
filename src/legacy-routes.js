@@ -26,20 +26,6 @@ const wrapHashPrefix = (hash: string): string => `\\x${hash}`
 const unwrapHashPrefix = (hash: string): string => hash.substr(2)
 
 /**
- * Helper function which gets transaction inputs and outputs from an array of transaction ids
- * and returns them in an object with keys of respective names
- * @param {*} db Database
- * @param {*} Server Server Config Object
- */
-const getTxMovements = async (
-  dbApi: any, txIds: Array<string>,
-) => {
-  const txInputsResult = await dbApi.getDistinctTxInputs(txIds)
-  const txOutputsResult = await dbApi.getDistinctTxOutputs(txIds)
-  return { txInputs: txInputsResult.rows, txOutputs: txOutputsResult.rows }
-}
-
-/**
  * Initializes tx entry in the caTxList format into which inputs can be added and summed.
  * @param {Tx} tx Transaction from database
  */
@@ -84,12 +70,15 @@ const pushMovementToTxMap = (
 /**
  * Assigns tx inputs and outputs to corresponding transactions to build caTxList
  * @param {Array<Tx>} transactions Array of transactions fetched from database
- * @param {*} movements TxInputs and TxOutputs object
+ * @param {Array<Movement>} txInputs Array of tx inputs
+ * @param {Array<Movement>} txOutputs Array of tx outputs
  */
-const buildTxList = (transactions: Array<Tx>, movements) => {
+const buildTxList = (
+  transactions: Array<Tx>, txInputs: Array<Movement>, txOutputs: Array<Movement>,
+) => {
   const txMap = new Map(transactions.map(tx => [tx.id, initializeTxEntry(tx)]))
-  movements.txInputs.forEach(txInput => pushMovementToTxMap(txMap, txInput, true))
-  movements.txOutputs.forEach(txOutput => pushMovementToTxMap(txMap, txOutput, false))
+  txInputs.forEach(txInput => pushMovementToTxMap(txMap, txInput, true))
+  txOutputs.forEach(txOutput => pushMovementToTxMap(txMap, txOutput, false))
 
   const txList: Array<TxEntry> = [...txMap.values()]
     .sort((a, b) => b.ctbTimeIssued - a.ctbTimeIssued)
@@ -116,12 +105,13 @@ const getAddressSummaryForAddresses = async (
     ...outTxs.map(tx => tx.id),
   ])]
 
-  const txMovements = await getTxMovements(dbApi, uniqueTxIds)
-  const caTxList = buildTxList([...inTxs, ...outTxs], txMovements)
+  const { rows: txInputs } = await dbApi.getDistinctTxInputs(uniqueTxIds)
+  const { rows: txOutputs } = await dbApi.getDistinctTxOutputs(uniqueTxIds)
+  const caTxList = buildTxList([...inTxs, ...outTxs], txInputs, txOutputs)
 
   const addressSet = new Set(addresses)
-  const totalInput = sumTxs(txMovements.txOutputs, addressSet)
-  const totalOutput = sumTxs(txMovements.txInputs, addressSet)
+  const totalInput = sumTxs(txOutputs, addressSet)
+  const totalOutput = sumTxs(txInputs, addressSet)
 
   return {
     caTxNum: caTxList.length,
