@@ -108,15 +108,12 @@ const sumTxs = (txs, addressSet) => arraySum(txs
 const getAddressSummaryForAddresses = async (
   dbApi: any, addresses: Array<string>,
 ) => {
-  const inTxsRes = await dbApi.getInwardTransactions(addresses)
-  const outTxsRes = await dbApi.getOutwardTransactions(addresses)
-
-  const inTxs = inTxsRes.rows
-  const outTxs = outTxsRes.rows
+  const { rows: inTxs } = await dbApi.getInwardTransactions(addresses)
+  const { rows: outTxs } = await dbApi.getOutwardTransactions(addresses)
 
   const uniqueTxIds = [...new Set([
-    ...inTxsRes.rows.map(tx => tx.id),
-    ...outTxsRes.rows.map(tx => tx.id),
+    ...inTxs.map(tx => tx.id),
+    ...outTxs.map(tx => tx.id),
   ])]
 
   const txMovements = await getTxMovements(dbApi, uniqueTxIds)
@@ -165,18 +162,15 @@ const addressSummary = (dbApi: any, { logger }: ServerConfig) => async (req: any
 const txSummary = (dbApi: any, { logger }: ServerConfig) => async (req: any,
 ) => {
   const { tx } = req.params
-  const getTxResult = await dbApi.getTx(wrapHashPrefix(tx))
-  if (getTxResult.rows.length === 0) return { Left: invalidTx }
+  const { rows: txResult } = await dbApi.getTx(wrapHashPrefix(tx))
+  if (txResult.length === 0) return { Left: invalidTx }
 
-  const txRow = getTxResult.rows[0]
-  const getBlockResult = await dbApi.getBlockById(txRow.block)
-  const blockRow = getBlockResult.rows[0]
+  const txRow = txResult[0]
+  const { rows: blockResult } = await dbApi.getBlockById(txRow.block)
+  const blockRow = blockResult[0]
 
-  const inputsResult = await dbApi.getTxInputs(txRow.id)
-  const outputsResult = await dbApi.getDistinctTxOutputs([txRow.id])
-
-  const inputs = inputsResult.rows
-  const outputs = outputsResult.rows
+  const { rows: inputs } = await dbApi.getTxInputs(txRow.id)
+  const { rows: outputs } = await dbApi.getDistinctTxOutputs([txRow.id])
 
   const totalInput = arraySum(inputs.map(elem => elem.value))
   const totalOutput = arraySum(outputs.map(elem => elem.value))
@@ -219,12 +213,12 @@ const txSummary = (dbApi: any, { logger }: ServerConfig) => async (req: any,
 const txRaw = (dbApi: any, { logger }: ServerConfig) => async (req: any,
 ) => {
   const { tx } = req.params
-  const result = await dbApi.txSummary(tx)
-  if (result.rows.length === 0) {
+  const { rows: txs } = await dbApi.txSummary(tx)
+  if (txs.length === 0) {
     return { Left: invalidTx }
   }
   logger.debug('[txRaw] result calculated')
-  return { Right: result.rows[0].tx_body }
+  return { Right: txs[0].tx_body }
 }
 
 /**
