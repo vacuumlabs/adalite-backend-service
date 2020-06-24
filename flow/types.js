@@ -74,6 +74,12 @@ declare module 'icarus-backend' {
     getCoin: Big
   }
 
+  declare type Tx = {
+    id: number,
+    hash: string,
+    time: Date,
+  }
+
   declare type TxEntry = {
     ctbId: string,
     ctbTimeIssued: moment,

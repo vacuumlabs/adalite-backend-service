@@ -9,6 +9,7 @@ import type {
   Movement,
   MovementEntry,
   TxEntry,
+  Tx,
 } from 'icarus-backend'; // eslint-disable-line
 
 const withPrefix = route => `/api${route}`
@@ -40,9 +41,9 @@ const getTxMovements = async (
 
 /**
  * Initializes tx entry in the caTxList format into which inputs can be added and summed.
- * @param {*} TODO
+ * @param {Tx} tx Transaction from database
  */
-const initializeTxEntry = (tx) : TxEntry => ({
+const initializeTxEntry = (tx: Tx) : TxEntry => ({
   ctbId: unwrapHashPrefix(tx.hash),
   ctbTimeIssued: moment(tx.time).unix(),
   ctbInputs: [],
@@ -53,15 +54,17 @@ const initializeTxEntry = (tx) : TxEntry => ({
 
 /**
  * Initializes tx input/output entry
- * @param {*} TODO
+ * @param {Movement} movement Tx input or output
  */
-const initializeMovementEntry = (tx: Movement)
-: MovementEntry => [tx.address, { getCoin: tx.value }]
+const initializeMovementEntry = (movement: Movement)
+: MovementEntry => [movement.address, { getCoin: movement.value }]
 
 /**
  * Pushes tx movement to corresponding tx entry and sums its value
  * according to whether it's tx input or output
- * @param {*} TODO
+ * @param {Map<number, TxEntry>} txMap Map which holds txEntries at id keys used for fast lookups
+ * @param {Movement} movement Tx input or output
+ * @param {boolean} isInput Indicates whether to add movement to tx inputs or outputs
  */
 const pushMovementToTxMap = (
   txMap: Map<number, TxEntry>, movement: Movement, isInput: boolean,
@@ -80,9 +83,10 @@ const pushMovementToTxMap = (
 
 /**
  * Assigns tx inputs and outputs to corresponding transactions to build caTxList
- * @param {*} TODO
+ * @param {Array<Tx>} transactions Array of transactions fetched from database
+ * @param {*} movements TxInputs and TxOutputs object
  */
-const buildTxList = (transactions: Array<Object>, movements) => {
+const buildTxList = (transactions: Array<Tx>, movements) => {
   const txMap = new Map(transactions.map(tx => [tx.id, initializeTxEntry(tx)]))
   movements.txInputs.forEach(txInput => pushMovementToTxMap(txMap, txInput, true))
   movements.txOutputs.forEach(txOutput => pushMovementToTxMap(txMap, txOutput, false))

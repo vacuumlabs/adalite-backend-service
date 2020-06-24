@@ -85,7 +85,7 @@ const bulkAddressSummary = (db: Pool) => async (addresses: Array<string>): Promi
 /**
 * Queries TXS table looking for a successful transaction with a given hash
 * @param {Db Object} db
-* @param {*} tx
+* @param {Transaction} tx
 */
 const txSummary = (db: Pool) => async (tx: string): Promise<ResultSet> =>
   db.query({
@@ -96,7 +96,7 @@ const txSummary = (db: Pool) => async (tx: string): Promise<ResultSet> =>
 /**
 * Queries TX table looking for tx by its hash
 * @param {Db Object} db
-* @param {*} tx
+* @param {Transaction} tx
 */
 const getTx = (db: Pool) => async (tx: string): Promise<ResultSet> =>
   db.query({
@@ -107,7 +107,7 @@ const getTx = (db: Pool) => async (tx: string): Promise<ResultSet> =>
 /**
 * Queries BLOCK table looking for block with a given id
 * @param {Db Object} db
-* @param {*} blockId
+* @param {Block} blockId
 */
 const getBlockById = (db: Pool) => async (blockId: string): Promise<ResultSet> =>
   db.query({
@@ -116,9 +116,9 @@ const getBlockById = (db: Pool) => async (blockId: string): Promise<ResultSet> =
   })
 
 /**
-* TODO
+* Quries TX* tables to get txInputs for a given transaction
 * @param {Db Object} db
-* @param {*} tx
+* @param {Transaction} tx
 */
 const getTxInputs = (db: Pool) => async (tx: string): Promise<ResultSet> =>
   db.query({
@@ -134,7 +134,7 @@ const getTxInputs = (db: Pool) => async (tx: string): Promise<ResultSet> =>
 /**
 * Queries TX, BLOCK, TX_OUT tables to acquire transactions that went into given addresses
 * @param {Db Object} db
-* @param {*} addresses
+* @param {Array<Address>} addresses
 */
 const getInwardTransactions = (db: Pool) => async (addresses: Array<string>): Promise<ResultSet> =>
   db.query({
@@ -150,7 +150,7 @@ const getInwardTransactions = (db: Pool) => async (addresses: Array<string>): Pr
 /**
 * Queries TX, BLOCK, TX_OUT tables to acquire transactions that went into given addresses
 * @param {Db Object} db
-* @param {*} addresses
+* @param {Array<Address>} addresses
 */
 const getOutwardTransactions = (db: Pool) => async (addresses: Array<string>): Promise<ResultSet> =>
   db.query({
@@ -167,7 +167,7 @@ const getOutwardTransactions = (db: Pool) => async (addresses: Array<string>): P
 /**
 * Queries TX* tables to acquire distinct tx inputs for given transactions
 * @param {Db Object} db
-* @param {*} txs
+* @param {Array<Transaction>} txs
 */
 const getDistinctTxInputs = (db: Pool) => async (txs: Array<string>): Promise<ResultSet> =>
   db.query({
@@ -184,7 +184,7 @@ const getDistinctTxInputs = (db: Pool) => async (txs: Array<string>): Promise<Re
 /**
 * Queries TX* tables to acquire distinct tx outputs for given transactions
 * @param {Db Object} db
-* @param {*} txs
+* @param {Array<Transaction>} txs
 */
 const getDistinctTxOutputs = (db: Pool) => async (txs: Array<string>): Promise<ResultSet> =>
   db.query({
