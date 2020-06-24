@@ -94,7 +94,7 @@ const txSummary = (db: Pool) => async (tx: string): Promise<ResultSet> =>
   })
 
 /**
-* TODO
+* Queries TX table looking for tx by its hash
 * @param {Db Object} db
 * @param {*} tx
 */
@@ -105,7 +105,7 @@ const getTx = (db: Pool) => async (tx: string): Promise<ResultSet> =>
   })
 
 /**
-* TODO
+* TODO: MERGE
 * @param {Db Object} db
 * @param {*} tx
 */
@@ -120,7 +120,7 @@ const getTxOutputs = (db: Pool) => async (tx: string): Promise<ResultSet> =>
   })
 
 /**
-* TODO
+* Queries BLOCK table looking for block with a given id
 * @param {Db Object} db
 * @param {*} blockId
 */
@@ -147,9 +147,9 @@ const getTxInputs = (db: Pool) => async (tx: string): Promise<ResultSet> =>
   })
 
 /**
-* TODO
+* Queries TX, BLOCK, TX_OUT tables to acquire transactions that went into given addresses
 * @param {Db Object} db
-* @param {*} address
+* @param {*} addresses
 */
 const getInwardTransactions = (db: Pool) => async (addresses: Array<string>): Promise<ResultSet> =>
   db.query({
@@ -163,9 +163,9 @@ const getInwardTransactions = (db: Pool) => async (addresses: Array<string>): Pr
   })
 
 /**
-* TODO
+* Queries TX, BLOCK, TX_OUT tables to acquire transactions that went into given addresses
 * @param {Db Object} db
-* @param {*} address
+* @param {*} addresses
 */
 const getOutwardTransactions = (db: Pool) => async (addresses: Array<string>): Promise<ResultSet> =>
   db.query({
@@ -180,9 +180,9 @@ const getOutwardTransactions = (db: Pool) => async (addresses: Array<string>): P
   })
 
 /**
-* TODO
+* Queries TX* tables to acquire distinct tx inputs for given transactions
 * @param {Db Object} db
-* @param {*} tx
+* @param {*} txs
 */
 const getDistinctTxInputs = (db: Pool) => async (txs: Array<string>): Promise<ResultSet> =>
   db.query({
@@ -197,9 +197,9 @@ const getDistinctTxInputs = (db: Pool) => async (txs: Array<string>): Promise<Re
   })
 
 /**
-* TODO
+* Queries TX* tables to acquire distinct tx outputs for given transactions
 * @param {Db Object} db
-* @param {*} tx
+* @param {*} txs
 */
 const getDistinctTxOutputs = (db: Pool) => async (txs: Array<string>): Promise<ResultSet> =>
   db.query({

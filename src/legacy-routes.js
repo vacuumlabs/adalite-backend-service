@@ -16,11 +16,17 @@ const invalidAddress = 'Invalid Cardano address!'
 const invalidTx = 'Invalid transaction id!'
 
 const arraySum = (numbers) => numbers.reduce((acc, val) => acc.plus(Big(val)), Big(0))
+
+/**
+ * Database stores all hashes with prefix of '\x'. To hide inner database structure and
+ * deal with just the results in common format, these functions wrap and unwrap the hashes.
+*/
 const wrapHashPrefix = (hash: string): string => `\\x${hash}`
 const unwrapHashPrefix = (hash: string): string => hash.substr(2)
 
 /**
- * TODO
+ * Helper function which gets transaction inputs and outputs from an array of transaction ids
+ * and returns them in an object with keys of respective names
  * @param {*} db Database
  * @param {*} Server Server Config Object
  */
@@ -32,6 +38,10 @@ const getTxMovements = async (
   return { txInputs: txInputsResult.rows, txOutputs: txOutputsResult.rows }
 }
 
+/**
+ * Initializes tx entry in the caTxList format into which inputs can be added and summed.
+ * @param {*} TODO
+ */
 const initializeTxEntry = (tx) : TxEntry => ({
   ctbId: unwrapHashPrefix(tx.hash),
   ctbTimeIssued: moment(tx.time).unix(),
@@ -41,10 +51,18 @@ const initializeTxEntry = (tx) : TxEntry => ({
   ctbOutputSum: { getCoin: Big(0) },
 })
 
-const initializeMovementEntry = (tx: Movement) : MovementEntry => [
-  tx.address, { getCoin: tx.value },
-]
+/**
+ * Initializes tx input/output entry
+ * @param {*} TODO
+ */
+const initializeMovementEntry = (tx: Movement)
+: MovementEntry => [tx.address, { getCoin: tx.value }]
 
+/**
+ * Pushes tx movement to corresponding tx entry and sums its value
+ * according to whether it's tx input or output
+ * @param {*} TODO
+ */
 const pushMovementToTxMap = (
   txMap: Map<number, TxEntry>, movement: Movement, isInput: boolean,
 ) : void => {
@@ -60,6 +78,10 @@ const pushMovementToTxMap = (
   }
 }
 
+/**
+ * Assigns tx inputs and outputs to corresponding transactions to build caTxList
+ * @param {*} TODO
+ */
 const buildTxList = (transactions: Array<Object>, movements) => {
   const txMap = new Map(transactions.map(tx => [tx.id, initializeTxEntry(tx)]))
   movements.txInputs.forEach(txInput => pushMovementToTxMap(txMap, txInput, true))
@@ -74,6 +96,11 @@ const sumTxs = (txs, addressSet) => arraySum(txs
   .filter(tx => addressSet.has(tx.address))
   .map(tx => tx.value))
 
+/**
+ * An abstraction of building a result for address summary
+ * @param {*} db Database
+ * @param {*} Server Server Config Object
+ */
 const getAddressSummaryForAddresses = async (
   dbApi: any, addresses: Array<string>,
 ) => {
