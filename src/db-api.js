@@ -118,29 +118,20 @@ const getTxInputs = (db: Pool) => async (tx: string): Promise<ResultSet> =>
   })
 
 /**
-* Queries TX, BLOCK, TX_OUT tables to acquire transactions that went into given addresses
+* Queries TX, BLOCK, TX_OUT tables to acquire inward and outward transactions for given addresses
 * @param {Db Object} db
 * @param {Array<Address>} addresses
 */
-const getInwardTransactions = (db: Pool) => async (addresses: Array<string>): Promise<ResultSet> =>
+const getTransactions = (db: Pool) => async (addresses: Array<string>): Promise<ResultSet> =>
   db.query({
     text: `SELECT
       tx.id, tx.hash::text, block.time
       FROM block 
       INNER JOIN tx ON block.id = tx.block 
       INNER JOIN tx_out ON tx.id = tx_out.tx_id
-      WHERE tx_out.address = ANY($1)`,
-    values: [addresses],
-  })
-
-/**
-* Queries TX, BLOCK, TX_OUT tables to acquire transactions that went into given addresses
-* @param {Db Object} db
-* @param {Array<Address>} addresses
-*/
-const getOutwardTransactions = (db: Pool) => async (addresses: Array<string>): Promise<ResultSet> =>
-  db.query({
-    text: `SELECT DISTINCT 
+      WHERE tx_out.address = ANY($1)
+    UNION
+    SELECT DISTINCT 
       tx.id, tx.hash::text, block.time
       FROM block 
       INNER JOIN tx ON block.id = tx.block 
@@ -219,8 +210,7 @@ export default (db: Pool): DbApi => ({
   getTx: getTx(db),
   getBlockById: getBlockById(db),
   getTxInputs: getTxInputs(db),
-  getInwardTransactions: getInwardTransactions(db),
-  getOutwardTransactions: getOutwardTransactions(db),
+  getTransactions: getTransactions(db),
   getDistinctTxInputs: getDistinctTxInputs(db),
   getDistinctTxOutputs: getDistinctTxOutputs(db),
 })

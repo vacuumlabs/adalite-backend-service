@@ -97,17 +97,12 @@ const sumTxs = (txs, addressSet) => arraySum(txs
 const getAddressSummaryForAddresses = async (
   dbApi: any, addresses: Array<string>,
 ) => {
-  const { rows: inTxs } = await dbApi.getInwardTransactions(addresses)
-  const { rows: outTxs } = await dbApi.getOutwardTransactions(addresses)
-
-  const uniqueTxIds = [...new Set([
-    ...inTxs.map(tx => tx.id),
-    ...outTxs.map(tx => tx.id),
-  ])]
+  const { rows: txs } = await dbApi.getTransactions(addresses)
+  const uniqueTxIds = [...new Set([...txs.map(tx => tx.id)])]
 
   const { rows: txInputs } = await dbApi.getDistinctTxInputs(uniqueTxIds)
   const { rows: txOutputs } = await dbApi.getDistinctTxOutputs(uniqueTxIds)
-  const caTxList = buildTxList([...inTxs, ...outTxs], txInputs, txOutputs)
+  const caTxList = buildTxList(txs, txInputs, txOutputs)
 
   const addressSet = new Set(addresses)
   const totalInput = sumTxs(txOutputs, addressSet)
