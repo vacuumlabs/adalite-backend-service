@@ -12,13 +12,17 @@ import type {
   TxInputOutputEntry,
   TxEntry,
   Tx,
+  CoinObject,
 } from 'icarus-backend'; // eslint-disable-line
 
 const withPrefix = route => `/api${route}`
 const invalidAddress = 'Invalid Cardano address!'
 const invalidTx = 'Invalid transaction id!'
 
-const arraySum = (numbers): Big => numbers.reduce((acc, val) => acc.plus(Big(val)), Big(0))
+const arraySum = (
+  numbers: Array<Big | number>,
+): Big => numbers.reduce((acc: Big, val) => acc.plus(Big(val)), Big(0))
+const getCoinObject = (value: Big | number): CoinObject => ({ getCoin: `${Big(value)}` })
 
 /**
  * Database stores all hashes with prefix of '\x'. To hide inner database structure and
@@ -32,7 +36,7 @@ const unwrapHashPrefix = (hash: string): string => hash.substr(2)
  * @param {TxInput | TxOutput} txInputOutput Tx input or output
  */
 const initializeTxInputOutputEntry = (txInputOutput: TxInput | TxOutput)
-: TxInputOutputEntry => [txInputOutput.address, { getCoin: Big(txInputOutput.value) }]
+: TxInputOutputEntry => [txInputOutput.address, getCoinObject(txInputOutput.value)]
 
 /**
  * Builds tx entry in the caTxList format
@@ -47,8 +51,8 @@ const initializeTxEntry = (
   ctbTimeIssued: moment(tx.time).unix(),
   ctbInputs: txInputs.map(initializeTxInputOutputEntry),
   ctbOutputs: txOutputs.map(initializeTxInputOutputEntry),
-  ctbInputSum: { getCoin: arraySum(txInputs.map(txInput => txInput.value)) },
-  ctbOutputSum: { getCoin: arraySum(txOutputs.map(txOutput => txOutput.value)) },
+  ctbInputSum: getCoinObject(arraySum(txInputs.map(txInput => txInput.value))),
+  ctbOutputSum: getCoinObject(arraySum(txOutputs.map(txOutput => txOutput.value))),
 })
 
 /**
@@ -95,9 +99,7 @@ const getAddressSummaryForAddresses = async (
 
   return {
     caTxNum: caTxList.length,
-    caBalance: {
-      getCoin: `${totalInput.sub(totalOutput)}`,
-    },
+    caBalance: getCoinObject(totalInput.sub(totalOutput)),
     caTxList,
   }
 }
@@ -157,19 +159,11 @@ const txSummary = (dbApi: any, { logger }: ServerConfig) => async (req: any,
     ctsBlockSlot: Math.floor((blockTime - epoch0) / slotSeconds) % epochSlots,
     ctsBlockHash: unwrapHashPrefix(blockRow.hash),
     ctsRelayedBy: null,
-    ctsTotalInput: {
-      getCoin: `${totalInput}`,
-    },
-    ctsTotalOutput: {
-      getCoin: `${totalOutput}`,
-    },
-    ctsFees: {
-      getCoin: `${totalInput.sub(totalOutput)}`,
-    },
-    ctsInputs: inputs.map(
-      input => [input.address, { getCoin: input.value }]),
-    ctsOutputs: outputs.map(
-      output => [output.address, { getCoin: output.value }]),
+    ctsTotalInput: getCoinObject(totalInput),
+    ctsTotalOutput: getCoinObject(totalOutput),
+    ctsFees: getCoinObject(totalInput.sub(totalOutput)),
+    ctsInputs: inputs.map(initializeTxInputOutputEntry),
+    ctsOutputs: outputs.map(initializeTxInputOutputEntry),
   }
   logger.debug('[txSummary] result calculated')
   return { Right: right }
@@ -210,7 +204,7 @@ const unspentTxOutputs = (dbApi: any, { logger, apiConfig }: ServerConfig) => as
   const mappedRows = result.rows.map((row) => (
     {
       ...row, // TODO/hrafn experiment with \x format and transaction signing
-      cuCoins: { getCoin: row.cuCoins },
+      cuCoins: getCoinObject(row.cuCoins),
     }
   ))
   logger.debug('[unspentTxOutputs] result calculated')

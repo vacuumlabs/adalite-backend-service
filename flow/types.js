@@ -76,7 +76,7 @@ declare module 'icarus-backend' {
   declare type TxInputOutputEntry = [string, CoinObject]
 
   declare type CoinObject = {
-    getCoin: Big
+    getCoin: string
   }
 
   declare type Tx = {
