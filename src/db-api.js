@@ -106,7 +106,7 @@ const getBlockById = (db: Pool) => async (blockId: string): Promise<ResultSet> =
 * @param {Db Object} db
 * @param {Transaction} tx
 */
-const getTxInputs = (db: Pool) => async (tx: string): Promise<ResultSet> =>
+const getSingleTxInputs = (db: Pool) => async (tx: string): Promise<ResultSet> =>
   db.query({
     text: `SELECT
       tx_out.address, tx_out.value
@@ -142,11 +142,11 @@ const getTransactions = (db: Pool) => async (addresses: Array<string>): Promise<
   })
 
 /**
-* Queries TX* tables to acquire distinct tx inputs for given transactions
+* Queries TX* tables to acquire bulk tx inputs for given transactions
 * @param {Db Object} db
 * @param {Array<Transaction>} txs
 */
-const getDistinctTxInputs = (db: Pool) => async (txs: Array<string>): Promise<ResultSet> =>
+const getTxsInputs = (db: Pool) => async (txs: Array<string>): Promise<ResultSet> =>
   db.query({
     text: `SELECT DISTINCT
       tx.id as txId, tx_out.address, tx_out.value, tx2.hash, tx_out.index, (tx2.size = 0) 
@@ -159,11 +159,11 @@ const getDistinctTxInputs = (db: Pool) => async (txs: Array<string>): Promise<Re
   })
 
 /**
-* Queries TX* tables to acquire distinct tx outputs for given transactions
+* Queries TX* tables to acquire bulk tx outputs for given transactions
 * @param {Db Object} db
 * @param {Array<Transaction>} txs
 */
-const getDistinctTxOutputs = (db: Pool) => async (txs: Array<string>): Promise<ResultSet> =>
+const getTxsOutputs = (db: Pool) => async (txs: Array<string>): Promise<ResultSet> =>
   db.query({
     text: `SELECT
       tx.id as txId, tx_out.address, tx_out.value
@@ -209,8 +209,8 @@ export default (db: Pool): DbApi => ({
   // cardano-db-sync schema
   getTx: getTx(db),
   getBlockById: getBlockById(db),
-  getTxInputs: getTxInputs(db),
+  getSingleTxInputs: getSingleTxInputs(db),
   getTransactions: getTransactions(db),
-  getDistinctTxInputs: getDistinctTxInputs(db),
-  getDistinctTxOutputs: getDistinctTxOutputs(db),
+  getTxsInputs: getTxsInputs(db),
+  getTxsOutputs: getTxsOutputs(db),
 })

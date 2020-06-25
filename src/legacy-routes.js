@@ -100,8 +100,8 @@ const getAddressSummaryForAddresses = async (
   const { rows: txs } = await dbApi.getTransactions(addresses)
   const uniqueTxIds = [...new Set([...txs.map(tx => tx.id)])]
 
-  const { rows: txInputs } = await dbApi.getDistinctTxInputs(uniqueTxIds)
-  const { rows: txOutputs } = await dbApi.getDistinctTxOutputs(uniqueTxIds)
+  const { rows: txInputs } = await dbApi.getTxsInputs(uniqueTxIds)
+  const { rows: txOutputs } = await dbApi.getTxsOutputs(uniqueTxIds)
   const caTxList = buildTxList(txs, txInputs, txOutputs)
 
   const addressSet = new Set(addresses)
@@ -154,8 +154,8 @@ const txSummary = (dbApi: any, { logger }: ServerConfig) => async (req: any,
   const { rows: blockResult } = await dbApi.getBlockById(txRow.block)
   const blockRow = blockResult[0]
 
-  const { rows: inputs } = await dbApi.getTxInputs(txRow.id)
-  const { rows: outputs } = await dbApi.getDistinctTxOutputs([txRow.id])
+  const { rows: inputs } = await dbApi.getSingleTxInputs(txRow.id)
+  const { rows: outputs } = await dbApi.getTxsOutputs([txRow.id])
 
   const totalInput = arraySum(inputs.map(elem => elem.value))
   const totalOutput = arraySum(outputs.map(elem => elem.value))
