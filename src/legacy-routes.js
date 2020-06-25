@@ -3,6 +3,7 @@
 import { isValidAddress } from 'cardano-crypto.js'
 import moment from 'moment'
 import Big from 'big.js'
+import { groupBy } from 'lodash'
 
 import type {
   ServerConfig,
@@ -17,7 +18,7 @@ const withPrefix = route => `/api${route}`
 const invalidAddress = 'Invalid Cardano address!'
 const invalidTx = 'Invalid transaction id!'
 
-const arraySum = (numbers) => numbers.reduce((acc, val) => acc.plus(Big(val)), Big(0))
+const arraySum = (numbers): Big => numbers.reduce((acc, val) => acc.plus(Big(val)), Big(0))
 
 /**
  * Database stores all hashes with prefix of '\x'. To hide inner database structure and
@@ -27,46 +28,28 @@ const wrapHashPrefix = (hash: string): string => `\\x${hash}`
 const unwrapHashPrefix = (hash: string): string => hash.substr(2)
 
 /**
- * Initializes tx entry in the caTxList format into which inputs can be added and summed.
- * @param {Tx} tx Transaction from database
- */
-const initializeTxEntry = (tx: Tx) : TxEntry => ({
-  ctbId: unwrapHashPrefix(tx.hash),
-  ctbTimeIssued: moment(tx.time).unix(),
-  ctbInputs: [],
-  ctbOutputs: [],
-  ctbInputSum: { getCoin: Big(0) },
-  ctbOutputSum: { getCoin: Big(0) },
-})
-
-/**
  * Initializes tx input/output entry
  * @param {TxInput | TxOutput} txInputOutput Tx input or output
  */
 const initializeTxInputOutputEntry = (txInputOutput: TxInput | TxOutput)
-: TxInputOutputEntry => [txInputOutput.address, { getCoin: txInputOutput.value }]
+: TxInputOutputEntry => [txInputOutput.address, { getCoin: Big(txInputOutput.value) }]
 
 /**
- * Pushes tx input/output to corresponding tx entry and sums its value
- * according to whether it's tx input or output
- * @param {Map<number, TxEntry>} txMap Map which holds txEntries at id keys used for fast lookups
- * @param {TxInput | TxOutput} txInputOutput Tx input or output
- * @param {boolean} isInput Indicates whether to add tx to tx inputs or outputs
+ * Builds tx entry in the caTxList format
+ * @param {Tx} tx Transaction from database
+ * @param {Array<TxInput>} txInputs Transaction inputs of the tx from database
+ * @param {Array<TxOutput>} txOutputs Transaction outputs of the tx from database
  */
-const pushTxInputOutputToTxMap = (
-  txMap: Map<number, TxEntry>, txInputOutput: TxInput | TxOutput, isInput: boolean,
-) : void => {
-  const txEntry = txMap.get(txInputOutput.txid)
-  if (!txEntry) { return }
-
-  if (isInput) {
-    txEntry.ctbInputs.push(initializeTxInputOutputEntry(txInputOutput))
-    txEntry.ctbInputSum.getCoin = txEntry.ctbInputSum.getCoin.plus(txInputOutput.value)
-  } else {
-    txEntry.ctbOutputs.push(initializeTxInputOutputEntry(txInputOutput))
-    txEntry.ctbOutputSum.getCoin = txEntry.ctbOutputSum.getCoin.plus(txInputOutput.value)
-  }
-}
+const initializeTxEntry = (
+  tx: Tx, txInputs: Array<TxInput>, txOutputs: Array<TxOutput>,
+) : TxEntry => ({
+  ctbId: unwrapHashPrefix(tx.hash),
+  ctbTimeIssued: moment(tx.time).unix(),
+  ctbInputs: txInputs.map(initializeTxInputOutputEntry),
+  ctbOutputs: txOutputs.map(initializeTxInputOutputEntry),
+  ctbInputSum: { getCoin: arraySum(txInputs.map(txInput => txInput.value)) },
+  ctbOutputSum: { getCoin: arraySum(txOutputs.map(txOutput => txOutput.value)) },
+})
 
 /**
  * Assigns tx inputs and outputs to corresponding transactions to build caTxList
@@ -79,11 +62,10 @@ const buildTxList = (
   txInputs: Array<TxInput>,
   txOutputs: Array<TxOutput>,
 ) => {
-  const txMap = new Map(transactions.map(tx => [tx.id, initializeTxEntry(tx)]))
-  txInputs.forEach(txInput => pushTxInputOutputToTxMap(txMap, txInput, true))
-  txOutputs.forEach(txOutput => pushTxInputOutputToTxMap(txMap, txOutput, false))
-
-  const txList: Array<TxEntry> = [...txMap.values()]
+  const txInputMap = groupBy(txInputs, txInput => txInput.txid)
+  const txOutputMap = groupBy(txOutputs, txOutput => txOutput.txid)
+  const txList: Array<TxEntry> = transactions
+    .map(tx => initializeTxEntry(tx, txInputMap[tx.id], txOutputMap[tx.id]))
     .sort((a, b) => b.ctbTimeIssued - a.ctbTimeIssued)
   return txList
 }
