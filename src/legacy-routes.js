@@ -6,8 +6,9 @@ import Big from 'big.js'
 
 import type {
   ServerConfig,
-  Movement,
-  MovementEntry,
+  TxInput,
+  TxOutput,
+  TxInputOutputEntry,
   TxEntry,
   Tx,
 } from 'icarus-backend'; // eslint-disable-line
@@ -40,45 +41,47 @@ const initializeTxEntry = (tx: Tx) : TxEntry => ({
 
 /**
  * Initializes tx input/output entry
- * @param {Movement} movement Tx input or output
+ * @param {TxInput | TxOutput} txInputOutput Tx input or output
  */
-const initializeMovementEntry = (movement: Movement)
-: MovementEntry => [movement.address, { getCoin: movement.value }]
+const initializeTxInputOutputEntry = (txInputOutput: TxInput | TxOutput)
+: TxInputOutputEntry => [txInputOutput.address, { getCoin: txInputOutput.value }]
 
 /**
- * Pushes tx movement to corresponding tx entry and sums its value
+ * Pushes tx input/output to corresponding tx entry and sums its value
  * according to whether it's tx input or output
  * @param {Map<number, TxEntry>} txMap Map which holds txEntries at id keys used for fast lookups
- * @param {Movement} movement Tx input or output
- * @param {boolean} isInput Indicates whether to add movement to tx inputs or outputs
+ * @param {TxInput | TxOutput} txInputOutput Tx input or output
+ * @param {boolean} isInput Indicates whether to add tx to tx inputs or outputs
  */
-const pushMovementToTxMap = (
-  txMap: Map<number, TxEntry>, movement: Movement, isInput: boolean,
+const pushTxInputOutputToTxMap = (
+  txMap: Map<number, TxEntry>, txInputOutput: TxInput | TxOutput, isInput: boolean,
 ) : void => {
-  const txEntry = txMap.get(movement.txid)
+  const txEntry = txMap.get(txInputOutput.txid)
   if (!txEntry) { return }
 
   if (isInput) {
-    txEntry.ctbInputs.push(initializeMovementEntry(movement))
-    txEntry.ctbInputSum.getCoin = txEntry.ctbInputSum.getCoin.plus(movement.value)
+    txEntry.ctbInputs.push(initializeTxInputOutputEntry(txInputOutput))
+    txEntry.ctbInputSum.getCoin = txEntry.ctbInputSum.getCoin.plus(txInputOutput.value)
   } else {
-    txEntry.ctbOutputs.push(initializeMovementEntry(movement))
-    txEntry.ctbOutputSum.getCoin = txEntry.ctbOutputSum.getCoin.plus(movement.value)
+    txEntry.ctbOutputs.push(initializeTxInputOutputEntry(txInputOutput))
+    txEntry.ctbOutputSum.getCoin = txEntry.ctbOutputSum.getCoin.plus(txInputOutput.value)
   }
 }
 
 /**
  * Assigns tx inputs and outputs to corresponding transactions to build caTxList
  * @param {Array<Tx>} transactions Array of transactions fetched from database
- * @param {Array<Movement>} txInputs Array of tx inputs
- * @param {Array<Movement>} txOutputs Array of tx outputs
+ * @param {Array<TxInput>} txInputs Array of tx inputs
+ * @param {Array<TxOutput>} txOutputs Array of tx outputs
  */
 const buildTxList = (
-  transactions: Array<Tx>, txInputs: Array<Movement>, txOutputs: Array<Movement>,
+  transactions: Array<Tx>,
+  txInputs: Array<TxInput>,
+  txOutputs: Array<TxOutput>,
 ) => {
   const txMap = new Map(transactions.map(tx => [tx.id, initializeTxEntry(tx)]))
-  txInputs.forEach(txInput => pushMovementToTxMap(txMap, txInput, true))
-  txOutputs.forEach(txOutput => pushMovementToTxMap(txMap, txOutput, false))
+  txInputs.forEach(txInput => pushTxInputOutputToTxMap(txMap, txInput, true))
+  txOutputs.forEach(txOutput => pushTxInputOutputToTxMap(txMap, txOutput, false))
 
   const txList: Array<TxEntry> = [...txMap.values()]
     .sort((a, b) => b.ctbTimeIssued - a.ctbTimeIssued)
