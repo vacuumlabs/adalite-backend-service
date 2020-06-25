@@ -251,9 +251,9 @@ const bulkAddressSummary = (dbApi: any, { logger, apiConfig }: ServerConfig) => 
   if (addresses.some((addr) => !isValidAddress(addr))) {
     return { Left: invalidAddress }
   }
-  const right = await getAddressSummaryForAddresses(dbApi, addresses)
+  const addressSummaryResult = await getAddressSummaryForAddresses(dbApi, addresses)
   logger.debug('[bulkAddressSummary] result calculated')
-  return { Right: { caAddresses: addresses, ...right } }
+  return { Right: { caAddresses: addresses, ...addressSummaryResult } }
 }
 
 export default {
