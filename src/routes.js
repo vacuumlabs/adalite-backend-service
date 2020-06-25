@@ -65,7 +65,7 @@ const utxoForAddresses = (dbApi: DbApi, { logger, apiConfig }: ServerConfig) => 
   logger.debug('[utxoForAddresses] request is valid')
   const result = await dbApi.utxoForAddresses(req.body.addresses)
   logger.debug('[utxoForAddresses] result calculated')
-  return result.rows
+  return result
 }
 
 /**
@@ -81,7 +81,7 @@ const filterUsedAddresses = (dbApi: DbApi, { logger, apiConfig }: ServerConfig) 
   logger.debug('[filterUsedAddresses] request is valid')
   const result = await dbApi.filterUsedAddresses(req.body.addresses)
   logger.debug('[filterUsedAddresses] result calculated')
-  return result.rows.reduce((acc, row) => acc.concat(row), [])
+  return result.reduce((acc, row) => acc.concat(row), [])
 }
 
 /**
@@ -96,7 +96,7 @@ const utxoSumForAddresses = (dbApi: DbApi, { logger, apiConfig }: ServerConfig) 
   logger.debug('[utxoSumForAddresses] request is valid')
   const result = await dbApi.utxoSumForAddresses(req.body.addresses)
   logger.debug('[utxoSumForAddresses] result calculated')
-  return result.rows[0]
+  return result[0]
 }
 
 /**
@@ -116,7 +116,7 @@ const transactionsHistory = (dbApi: DbApi, { logger, apiConfig }: ServerConfig) 
     moment(req.body.dateFrom).toDate(),
   )
   logger.debug('[transactionsHistory] result calculated')
-  return result.rows
+  return result
 }
 
 /**

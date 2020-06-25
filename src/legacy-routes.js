@@ -86,11 +86,11 @@ const sumTxs = (txs, addressSet) => arraySum(txs
 const getAddressSummaryForAddresses = async (
   dbApi: any, addresses: Array<string>,
 ) => {
-  const { rows: txs } = await dbApi.getTransactions(addresses)
+  const txs = await dbApi.getTransactions(addresses)
   const uniqueTxIds = [...new Set([...txs.map(tx => tx.id)])]
 
-  const { rows: txInputs } = await dbApi.getTxsInputs(uniqueTxIds)
-  const { rows: txOutputs } = await dbApi.getTxsOutputs(uniqueTxIds)
+  const txInputs = await dbApi.getTxsInputs(uniqueTxIds)
+  const txOutputs = await dbApi.getTxsOutputs(uniqueTxIds)
   const caTxList = buildTxList(txs, txInputs, txOutputs)
 
   const addressSet = new Set(addresses)
@@ -134,15 +134,15 @@ const addressSummary = (dbApi: any, { logger }: ServerConfig) => async (req: any
 const txSummary = (dbApi: any, { logger }: ServerConfig) => async (req: any,
 ) => {
   const { tx } = req.params
-  const { rows: txResult } = await dbApi.getTx(wrapHashPrefix(tx))
+  const txResult = await dbApi.getTx(wrapHashPrefix(tx))
   if (txResult.length === 0) return { Left: invalidTx }
 
   const txRow = txResult[0]
-  const { rows: blockResult } = await dbApi.getBlockById(txRow.block)
+  const blockResult = await dbApi.getBlockById(txRow.block)
   const blockRow = blockResult[0]
 
-  const { rows: inputs } = await dbApi.getSingleTxInputs(txRow.id)
-  const { rows: outputs } = await dbApi.getTxsOutputs([txRow.id])
+  const inputs = await dbApi.getSingleTxInputs(txRow.id)
+  const outputs = await dbApi.getTxsOutputs([txRow.id])
 
   const totalInput = arraySum(inputs.map(elem => elem.value))
   const totalOutput = arraySum(outputs.map(elem => elem.value))
@@ -177,7 +177,7 @@ const txSummary = (dbApi: any, { logger }: ServerConfig) => async (req: any,
 const txRaw = (dbApi: any, { logger }: ServerConfig) => async (req: any,
 ) => {
   const { tx } = req.params
-  const { rows: txs } = await dbApi.txSummary(tx)
+  const txs = await dbApi.txSummary(tx)
   if (txs.length === 0) {
     return { Left: invalidTx }
   }
@@ -201,7 +201,7 @@ const unspentTxOutputs = (dbApi: any, { logger, apiConfig }: ServerConfig) => as
     return { Left: invalidAddress }
   }
   const result = await dbApi.utxoLegacy(addresses)
-  const mappedRows = result.rows.map((row) => (
+  const mappedRows = result.map((row) => (
     {
       ...row, // TODO/hrafn experiment with \x format and transaction signing
       cuCoins: getCoinObject(row.cuCoins),

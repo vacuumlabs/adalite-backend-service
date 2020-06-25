@@ -1,7 +1,14 @@
 // @flow
 
-import type { Pool, ResultSet } from 'pg'
+import type { Pool, ResultSet, Row } from 'pg'
 import type { DbApi } from 'icarus-backend'; // eslint-disable-line
+
+const extractRows = (
+  dbQuery: (...dbArgs: any) => Promise<ResultSet>,
+) => async (args: any): Promise<Array<Row>> => {
+  const dbResult = await dbQuery(args)
+  return dbResult.rows
+}
 
 /**
  * Returns the list of addresses that were used at least once (as input or output)
@@ -197,20 +204,20 @@ const bestBlock = (db: Pool) => async (): Promise<number> => {
 }
 
 export default (db: Pool): DbApi => ({
-  filterUsedAddresses: filterUsedAddresses(db),
-  unspentAddresses: unspentAddresses(db),
-  utxoForAddresses: utxoForAddresses(db),
-  utxoSumForAddresses: utxoSumForAddresses(db),
-  transactionsHistoryForAddresses: transactionsHistoryForAddresses(db),
+  filterUsedAddresses: extractRows(filterUsedAddresses(db)),
+  unspentAddresses: extractRows(unspentAddresses(db)),
+  utxoForAddresses: extractRows(utxoForAddresses(db)),
+  utxoSumForAddresses: extractRows(utxoSumForAddresses(db)),
+  transactionsHistoryForAddresses: extractRows(transactionsHistoryForAddresses(db)),
   bestBlock: bestBlock(db),
   // legacy
-  txSummary: txSummary(db),
-  utxoLegacy: utxoLegacy(db),
+  txSummary: extractRows(txSummary(db)),
+  utxoLegacy: extractRows(utxoLegacy(db)),
   // cardano-db-sync schema
-  getTx: getTx(db),
-  getBlockById: getBlockById(db),
-  getSingleTxInputs: getSingleTxInputs(db),
-  getTransactions: getTransactions(db),
-  getTxsInputs: getTxsInputs(db),
-  getTxsOutputs: getTxsOutputs(db),
+  getTx: extractRows(getTx(db)),
+  getBlockById: extractRows(getBlockById(db)),
+  getSingleTxInputs: extractRows(getSingleTxInputs(db)),
+  getTransactions: extractRows(getTransactions(db)),
+  getTxsInputs: extractRows(getTxsInputs(db)),
+  getTxsOutputs: extractRows(getTxsOutputs(db)),
 })
