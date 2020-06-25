@@ -222,13 +222,12 @@ const unspentTxOutputs = (dbApi: any, { logger, apiConfig }: ServerConfig) => as
     return { Left: invalidAddress }
   }
   const result = await dbApi.utxoLegacy(addresses)
-  const mappedRows = result.rows.map((row) => {
-    const coins = row.cuCoins
-    const newRow = row
-    newRow.cuCoins = { getCoin: coins }
-    newRow.cuId = row.cuId // TODO/hrafn \x format
-    return newRow
-  })
+  const mappedRows = result.rows.map((row) => (
+    {
+      ...row, // TODO/hrafn experiment with \x format and transaction signing
+      cuCoins: { getCoin: row.cuCoins },
+    }
+  ))
   logger.debug('[unspentTxOutputs] result calculated')
   return { Right: mappedRows }
 }
