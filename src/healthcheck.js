@@ -5,11 +5,11 @@ import delay from 'delay'
 import { RTMClient } from '@slack/client'
 import config from './config'
 import dbApi from './db-api'
-import importerApi from './importer-api'
+import importerApi from './tx-submit-api'
 import type { DbApi } from 'icarus-backend' // eslint-disable-line
 
-const { logger, importerSendTxEndpoint } = config.get('server')
-const importer = importerApi(importerSendTxEndpoint)
+const { logger, txSubmitApiUrl } = config.get('server')
+const importer = importerApi(txSubmitApiUrl)
 
 // TODO refactor to state machine, add tests
 

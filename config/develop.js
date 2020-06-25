@@ -5,7 +5,7 @@ module.exports = {
   server: {
     corsEnabledFor: '*',
     logger: raw(consoleLogger('debug')),
-    importerSendTxEndpoint: 'https://localhost:8200/api/txs/signed',
+    txSubmitApiUrl: 'https://localhost:8200/api/txs/signed',
   },
   db: {
     user: 'postgres',

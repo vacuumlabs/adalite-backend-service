@@ -8,7 +8,7 @@ import restify from 'restify'
 import config from './config'
 import routes from './routes'
 import legacyRoutes from './legacy-routes'
-import importerApi from './importer-api'
+import importerApi from './tx-submit-api'
 import dbApi from './db-api'
 import manageConnections from './ws-connections'
 import createDB from './db'
@@ -18,7 +18,7 @@ import responseGuard from './middleware/response-guard'
 
 const serverConfig = config.get('server')
 const {
-  logger, importerSendTxEndpoint, disableHealthcheck, corsEnabledFor, allowCredentials,
+  logger, txSubmitApiUrl, disableHealthcheck, corsEnabledFor, allowCredentials,
 } = serverConfig
 
 async function createServer() {
@@ -64,7 +64,7 @@ async function createServer() {
         const result = await handler(
           dbApi(db),
           serverConfig,
-          importerApi(importerSendTxEndpoint),
+          importerApi(txSubmitApiUrl),
         )(req)
         res.send(result)
         next()

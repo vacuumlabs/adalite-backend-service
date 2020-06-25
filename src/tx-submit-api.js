@@ -3,9 +3,9 @@ import { post } from 'axios'
 
 import type { ImporterApi } from 'icarus-backend'; // eslint-disable-line
 
-export default (importerSendTxEndpoint: string): ImporterApi => ({
+export default (txSubmitApiUrl: string): ImporterApi => ({
   sendTx: tx => post(
-    `${importerSendTxEndpoint}/api/submit/tx`,
+    `${txSubmitApiUrl}/api/submit/tx`,
     tx,
     {
       headers: {
