@@ -20,7 +20,7 @@ async function handleRestore(
     const result = await dbApi.unspentAddresses()
     logger.debug('[WS::handleRestore] Db result ready')
     logger.debug('[WS::handleRestore] Addresses processing start')
-    const addresses = flatten(result)
+    const addresses = flatten(result.rows)
     logger.debug('[WS::handleRestore] About to send the addresses')
     ws.send(toMessage({
       msg: MSG_TYPE_RESTORE,

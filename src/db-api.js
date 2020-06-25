@@ -204,11 +204,11 @@ const bestBlock = (db: Pool) => async (): Promise<number> => {
 }
 
 export default (db: Pool): DbApi => ({
-  filterUsedAddresses: extractRows(filterUsedAddresses(db)),
-  unspentAddresses: extractRows(unspentAddresses(db)),
-  utxoForAddresses: extractRows(utxoForAddresses(db)),
-  utxoSumForAddresses: extractRows(utxoSumForAddresses(db)),
-  transactionsHistoryForAddresses: extractRows(transactionsHistoryForAddresses(db)),
+  filterUsedAddresses: filterUsedAddresses(db),
+  unspentAddresses: unspentAddresses(db),
+  utxoForAddresses: utxoForAddresses(db),
+  utxoSumForAddresses: utxoSumForAddresses(db),
+  transactionsHistoryForAddresses: transactionsHistoryForAddresses(db),
   bestBlock: bestBlock(db),
   // legacy
   txSummary: extractRows(txSummary(db)),
