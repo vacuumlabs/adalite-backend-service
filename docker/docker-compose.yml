@@ -94,7 +94,7 @@ services:
     volumes:
       - ${DATA_PATH}/node-ipc:/node-ipc
     ports:
-      - ${ADALITE_SUBMIT_API_HOST_PORT}:8080
+      - ${ADALITE_SUBMIT_API_HOST_PORT}:8101
     restart: on-failure
 
 volumes:
