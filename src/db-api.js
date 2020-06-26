@@ -98,6 +98,17 @@ const getTx = (db: Pool) => async (tx: string): Promise<ResultSet> =>
   })
 
 /**
+* Queries TX_BODY table looking for tx body by its hash
+* @param {Db Object} db
+* @param {Transaction} tx
+*/
+const getRawTx = (db: Pool) => async (tx: string): Promise<ResultSet> =>
+  db.query({
+    text: 'SELECT body::text as tx_body FROM tx_body WHERE hash = $1',
+    values: [tx],
+  })
+
+/**
 * Queries BLOCK table looking for block with a given id
 * @param {Db Object} db
 * @param {Block} blockId
@@ -215,6 +226,7 @@ export default (db: Pool): DbApi => ({
   utxoLegacy: extractRows(utxoLegacy(db)),
   // cardano-db-sync schema
   getTx: extractRows(getTx(db)),
+  getRawTx: extractRows(getRawTx(db)),
   getBlockById: extractRows(getBlockById(db)),
   getSingleTxInputs: extractRows(getSingleTxInputs(db)),
   getTransactions: extractRows(getTransactions(db)),

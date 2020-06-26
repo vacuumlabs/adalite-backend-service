@@ -177,12 +177,12 @@ const txSummary = (dbApi: any, { logger }: ServerConfig) => async (req: any,
 const txRaw = (dbApi: any, { logger }: ServerConfig) => async (req: any,
 ) => {
   const { tx } = req.params
-  const txs = await dbApi.txSummary(tx)
+  const txs = await dbApi.getRawTx(wrapHashPrefix(tx))
   if (txs.length === 0) {
     return { Left: invalidTx }
   }
   logger.debug('[txRaw] result calculated')
-  return { Right: txs[0].tx_body }
+  return { Right: txs[0].tx_body } // TODO/hrafn \x format unwrap?
 }
 
 /**

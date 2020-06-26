@@ -51,12 +51,13 @@ services:
       - ${DATA_PATH}/node-ipc:/ipc
 
   cardano-db-sync:
-    image: inputoutput/cardano-db-sync:master
+    image: hrafnar/cardano-db-sync:latest
     environment:
       - NETWORK=${NETWORK}
       - POSTGRES_HOST=postgres
       - POSTGRES_PORT=5432
       - POSTGRES_DB=${POSTGRES_DB}
+      - EXTENDED=true
       # "As of today, it is absolutely mandatory for the postgres_user to be defined as cexplorer"
       # quoted from https://github.com/input-output-hk/cardano-rest/wiki/Docker
       - POSTGRES_USER=cexplorer
