@@ -19,7 +19,7 @@ const filterUsedAddresses = (db: Pool) => async (
   addresses: Array<string>,
 ): Promise<ResultSet> =>
   db.query({
-    text: 'SELECT DISTINCT address FROM "tx_addresses" WHERE address = ANY($1)',
+    text: 'SELECT DISTINCT address FROM tx_out WHERE address = ANY($1)',
     values: [addresses],
     rowMode: 'array',
   })
