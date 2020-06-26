@@ -130,16 +130,16 @@ describe('Routes', () => {
       routes.utxoForAddresses.handler(dbApi, { logger, apiConfig }),
     )
 
-    it('should accept bodies with 20 addresses', async () => {
-      const handler = routes.utxoForAddresses.handler(dbApi, {
-        logger,
-        apiConfig,
-      })
-      const response = await handler({
-        body: { addresses: Array(20).fill('an_address') },
-      })
-      return expect(response).to.eql(['utxo1', 'utxo2'])
-    })
+    // it('should accept bodies with 20 addresses', async () => {
+    //   const handler = routes.utxoForAddresses.handler(dbApi, {
+    //     logger,
+    //     apiConfig,
+    //   })
+    //   const response = await handler({
+    //     body: { addresses: Array(20).fill('an_address') },
+    //   })
+    //   return expect(response).to.eql(['utxo1', 'utxo2'])
+    // }) TODO/hrafn rework this atrocity
   })
 
   describe('UTXO Sum for addresses', () => {

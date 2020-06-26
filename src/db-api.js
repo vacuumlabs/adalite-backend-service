@@ -30,6 +30,16 @@ const unspentAddresses = (db: Pool) => async (): Promise<ResultSet> =>
     rowMode: 'array',
   })
 
+const utxoQuery = `SELECT 
+  TRIM(LEADING '\\x' from tx.hash::text) AS "tx_hash", tx_out.index AS "tx_index",
+  tx_out.address AS "receiver", tx_out.value AS "amount", tx.block::INTEGER as "block_num"
+FROM tx
+INNER JOIN tx_out ON tx.id = tx_out.tx_id
+WHERE NOT EXISTS (SELECT true
+  FROM tx_in
+  WHERE (tx_out.tx_id = tx_in.tx_out_id) AND (tx_out.index = tx_in.tx_out_index)
+) AND (tx_out.address = ANY($1))`
+
 /**
  * Queries UTXO table looking for unspents for given addresses
  *
@@ -38,22 +48,12 @@ const unspentAddresses = (db: Pool) => async (): Promise<ResultSet> =>
  */
 const utxoForAddresses = (db: Pool) => async (addresses: Array<string>) =>
   db.query({
-    text: `SELECT 
-        TRIM(LEADING '\\x' from tx.hash::text) AS "tx_hash", tx_out.index AS "tx_index",
-        tx_out.address AS "receiver", tx_out.value AS "amount", tx.block as "block_num"
-      FROM tx
-      INNER JOIN tx_out ON tx.id = tx_out.tx_id
-      WHERE NOT EXISTS (SELECT true
-        FROM tx_in
-        WHERE (tx_out.tx_id = tx_in.tx_out_id) AND (tx_out.index = tx_in.tx_out_index)
-      ) AND (tx_out.address = ANY($1))`,
+    text: utxoQuery,
     values: [addresses],
   })
 
 const utxoSumForAddresses = (db: Pool) => async (addresses: Array<string>) =>
-  db.query('SELECT SUM(amount) FROM "utxos" WHERE receiver = ANY($1)', [
-    addresses,
-  ])
+  db.query(`SELECT SUM(amount) FROM (${utxoQuery}) as utxo_table`, [addresses])
 
 // Cached queries
 const txHistoryQuery = (limit: number) => `
