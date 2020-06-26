@@ -139,7 +139,8 @@ const signedTransaction = (
   logger.debug('[signedTransaction] request start')
   let response
   try {
-    response = await importerApi.sendTx(Buffer.from(req.body, 'base64'))
+    const { signedTx }: string = req.body
+    response = await importerApi.sendTx(Buffer.from(signedTx, 'base64'))
     return response.data
   } catch (err) {
     if (err.response && err.response.status < 500 && err.response.data) {

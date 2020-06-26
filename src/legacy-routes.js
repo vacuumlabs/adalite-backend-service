@@ -204,6 +204,7 @@ const unspentTxOutputs = (dbApi: any, { logger, apiConfig }: ServerConfig) => as
   const mappedRows = result.map((row) => (
     {
       ...row, // TODO/hrafn experiment with \x format and transaction signing
+      cuId: unwrapHashPrefix(row.cuId),
       cuCoins: getCoinObject(row.cuCoins),
     }
   ))
