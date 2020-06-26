@@ -65,7 +65,11 @@ const utxoForAddresses = (dbApi: DbApi, { logger, apiConfig }: ServerConfig) => 
   logger.debug('[utxoForAddresses] request is valid')
   const result = await dbApi.utxoForAddresses(req.body.addresses)
   logger.debug('[utxoForAddresses] result calculated')
-  return result.rows
+  return result.rows.map(row => (
+    {
+      utxo_id: `${row.tx_hash}${row.tx_index}`,
+      ...row,
+    }))
 }
 
 /**

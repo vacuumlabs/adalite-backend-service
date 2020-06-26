@@ -37,7 +37,18 @@ const unspentAddresses = (db: Pool) => async (): Promise<ResultSet> =>
  * @param {Array<Address>} addresses
  */
 const utxoForAddresses = (db: Pool) => async (addresses: Array<string>) =>
-  db.query('SELECT * FROM "utxos" WHERE receiver = ANY($1)', [addresses])
+  db.query({
+    text: `SELECT 
+        TRIM(LEADING '\\x' from tx.hash::text) AS "tx_hash", tx_out.index AS "tx_index",
+        tx_out.address AS "receiver", tx_out.value AS "amount", tx.block as "block_num"
+      FROM tx
+      INNER JOIN tx_out ON tx.id = tx_out.tx_id
+      WHERE NOT EXISTS (SELECT true
+        FROM tx_in
+        WHERE (tx_out.tx_id = tx_in.tx_out_id) AND (tx_out.index = tx_in.tx_out_index)
+      ) AND (tx_out.address = ANY($1))`,
+    values: [addresses],
+  })
 
 const utxoSumForAddresses = (db: Pool) => async (addresses: Array<string>) =>
   db.query('SELECT SUM(amount) FROM "utxos" WHERE receiver = ANY($1)', [
