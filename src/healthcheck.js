@@ -26,16 +26,29 @@ async function fetchDbBestBlock(db): Promise<number> {
 }
 
 async function fetchExpectedBestBlock(): Promise<number> {
-  return axios.get('https://cardanoexplorer.com/api/blocks/pages') // eslint-disable-line
-    .then(response => {
-      const pages = response.data.Right[0]
-      const items = response.data.Right[1].length
-      return ((pages - 1) * 10) + items
-    })
-    .catch(error => {
-      logger.debug(error)
-      return 0
-    })
+  try {
+    const {
+      data: {
+        data: {
+          cardano: {
+            blockHeight,
+          },
+        },
+      },
+    } = (await axios.post(
+      'https://explorer.cardano-mainnet.iohk.io/graphql',
+      {
+        query: 'query cardanoDynamic {\n  cardano {\n    blockHeight\n    currentEpoch {\n      blocks(limit: 1, order_by: {number: desc_nulls_last}) {\n        slotWithinEpoch\n      }\n      lastBlockTime\n      number\n    }\n  }\n}\n',
+        variables: {},
+      },
+    ))
+
+    return blockHeight || 0
+  } catch (error) {
+    logger.error(error)
+  }
+
+  return 0
 }
 
 async function txTest(): Promise<boolean> {
@@ -43,15 +56,12 @@ async function txTest(): Promise<boolean> {
   try {
     // eslint-disable-next-line max-len
     const txBody = '82839f8200d818582482582034b30ffcc37cb23320d01286e444711ceabc74e96c9fe2387f5c3f313942b32900ff9f8282d818584283581c8c0acb0542d176ddbb02678462081194e40204fb622960d188388b64a101581e581c6aedca971f6e65187d53b8315b90dfdb80ac4d6bc72c6bf0b5bad01e001a3c747b481a0007a1208282d818584283581ceb2e580be8db93a736bdd8e9fe0d5f6e8ca50f456bf11834749f98a4a101581e581c6aedca971f6e65187d53bc318a1979025a753c53a2d781e915cc5858001aaf177b461a000503daffa0818200d81858858258409b39227a5c47d594e14b39304af5100a7de7f348d0548b7dc9df49615b9a2de50e6ed2a5ebe9b917cea198cb4c2db24d3829ab4cd7b0345df8aa420d5d7acc6f584004d4d7db6eb5b0f352d3f5ad036ce73968155a539f7f60f85a1d9b264d1cc2bc9e7eef7262fa45b579dd1f30b8d7faff9e362a77a4f51c66074b75e47e15bf06'
-    const signedBody = {
-      signedTx: Buffer.from(txBody, 'hex').toString('base64'),
-    }
-    response = await importer.sendTx(signedBody)
+    response = await importer.sendTx(Buffer.from(txBody, 'hex'))
   } catch (err) {
     if (err.response && err.response.status === 400) {
       return true
     }
-    logger.error(`[healthcheck] Unexpected tx submission response: ${err}`)
+    logger.error(`[healthcheck] Unexpected tx submission error: ${err.message}`)
     return false
   }
 
@@ -65,9 +75,9 @@ export async function healthcheckLoop(db: any) {
   const token = process.env.SLACK_TOKEN
   const channelId = process.env.SLACK_CHANNEL
   const rtm = new RTMClient(token)
-  if (token) {
-    rtm.start()
-  }
+  //if (token) {
+  //  rtm.start()
+  //}
 
   while (true) { // eslint-disable-line
     const dbBestBlock = await fetchDbBestBlock(db) // eslint-disable-line
@@ -76,14 +86,7 @@ export async function healthcheckLoop(db: any) {
 
     const isDbSynced = (expectedBestBlock - dbBestBlock <= 5)
 
-    /*
-     * Temporarily relax tx submission test to try submitting tx two times
-     * before failing because we are experiencing
-     * intermittent socket hang up issues upon tx submission via
-     * cardano-http-bridge: https://github.com/Emurgo/cardano-http-bridge/issues/17
-    */
-    // eslint-disable-next-line no-await-in-loop
-    const canSubmitTx = (await txTest()) || (await txTest())
+    const canSubmitTx = await txTest()
 
     const isHealthy = isDbSynced && canSubmitTx
     const { healthy: wasHealthy } = instanceHealthStatus

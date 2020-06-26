@@ -1,16 +1,16 @@
 // @flow
-import { post } from 'axios'
+import {post} from 'axios'
 
 import type { ImporterApi } from 'icarus-backend'; // eslint-disable-line
 
 export default (txSubmitApiUrl: string): ImporterApi => ({
-  sendTx: tx => post(
+  sendTx: (tx: Buffer) => post(
     `${txSubmitApiUrl}/api/submit/tx`,
     tx,
     {
       headers: {
         'Content-Type': 'application/cbor',
-      },
-    },
+      }
+    }
   ),
 })

@@ -139,15 +139,15 @@ const signedTransaction = (
   logger.debug('[signedTransaction] request start')
   let response
   try {
-    response = await importerApi.sendTx(req.body)
+    response = await importerApi.sendTx(Buffer.from(req.body, 'base64'))
     return response.data
   } catch (err) {
-    if (err.response && err.response.status === 400 && err.response.data) {
+    if (err.response && err.response.status < 500 && err.response.data) {
       throw new BadRequestError(err.response.data)
     }
     logger.error(
       '[signedTransaction] Error while doing request to backend',
-      err,
+      err.message,
     )
     throw new InternalServerError('Unknown Error: Transaction submission failed')
   }
