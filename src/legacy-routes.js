@@ -182,7 +182,7 @@ const txRaw = (dbApi: any, { logger }: ServerConfig) => async (req: any,
     return { Left: invalidTx }
   }
   logger.debug('[txRaw] result calculated')
-  return { Right: txs[0].tx_body } // TODO/hrafn \x format unwrap?
+  return { Right: unwrapHashPrefix(txs[0].tx_body) }
 }
 
 /**
