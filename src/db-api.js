@@ -3,10 +3,11 @@
 import type { Pool, ResultSet, Row } from 'pg'
 import type { DbApi } from 'icarus-backend'; // eslint-disable-line
 
+// helper function to avoid destructuring "".rows" in the codebase
 const extractRows = (
   dbQuery: (...dbArgs: any) => Promise<ResultSet>,
-) => async (args: any): Promise<Array<Row>> => {
-  const dbResult = await dbQuery(args)
+) => async (...args: any): Promise<Array<Row>> => {
+  const dbResult = await dbQuery(...args)
   return dbResult.rows
 }
 
@@ -55,20 +56,28 @@ const utxoForAddresses = (db: Pool) => async (addresses: Array<string>) =>
 const utxoSumForAddresses = (db: Pool) => async (addresses: Array<string>) =>
   db.query(`SELECT SUM(amount) FROM (${utxoQuery}) as utxo_table`, [addresses])
 
-// Cached queries
-const txHistoryQuery = (limit: number) => `
-  SELECT *
-  FROM "txs"
-  LEFT JOIN (SELECT * from "bestblock" LIMIT 1) f ON true
-  WHERE 
-    hash = ANY (
-      SELECT tx_hash 
-      FROM "tx_addresses"
-      where address = ANY ($1)
-    )
-    AND last_update >= $2
-  ORDER BY last_update ASC
-  LIMIT ${limit}
+const txHistory = (limit: number) => `
+  SELECT txs.id, txs.hash, txs.block_no, txs.blockHash, txs.block_index as tx_ordinal, txs.time, tx_body.body::text from (
+      SELECT
+        tx.id, tx.hash::text, block.block_no, block.hash::text as blockHash, block.time, tx.block_index
+        FROM block 
+        INNER JOIN tx ON block.id = tx.block 
+        INNER JOIN tx_out ON tx.id = tx_out.tx_id
+        WHERE tx_out.address = ANY($1)
+          AND block.time >= $2
+    UNION
+      SELECT DISTINCT 
+        tx.id, tx.hash::text, block.block_no, block.hash::text as blockHash, block.time, tx.block_index
+        FROM block 
+        INNER JOIN tx ON block.id = tx.block 
+        INNER JOIN tx_in ON tx.id = tx_in.tx_in_id 
+        INNER JOIN tx_out ON (tx_in.tx_out_id = tx_out.tx_id) AND (tx_in.tx_out_index = tx_out.index)
+        WHERE tx_out.address = ANY($1)
+          AND block.time >= $2
+    ORDER BY time ASC
+    LIMIT ${limit}
+  ) AS txs
+  JOIN tx_body ON txs.hash = tx_body.hash::text
 `
 
 /**
@@ -82,7 +91,7 @@ const transactionsHistoryForAddresses = (db: Pool) => async (
   limit: number,
   addresses: Array<string>,
   dateFrom: Date,
-): Promise<ResultSet> => db.query(txHistoryQuery(limit), [addresses, dateFrom])
+): Promise<ResultSet> => db.query(txHistory(limit), [addresses, dateFrom])
 
 // The remaining queries should be used only for the purposes of the legacy API!
 
@@ -178,7 +187,7 @@ const getTransactions = (db: Pool) => async (addresses: Array<string>): Promise<
 const getTxsInputs = (db: Pool) => async (txs: Array<string>): Promise<ResultSet> =>
   db.query({
     text: `SELECT DISTINCT
-      tx.id as txId, tx_out.address, tx_out.value, tx2.hash, tx_out.index, (tx2.size = 0) 
+      tx.id as txId, tx_out.address, tx_out.value, tx2.hash::text, tx_out.index, (tx2.size = 0) 
       FROM tx
       INNER JOIN tx_in ON tx.id = tx_in.tx_in_id 
       INNER JOIN tx_out ON (tx_in.tx_out_id = tx_out.tx_id) AND (tx_in.tx_out_index = tx_out.index) 
@@ -230,7 +239,7 @@ export default (db: Pool): DbApi => ({
   unspentAddresses: unspentAddresses(db),
   utxoForAddresses: utxoForAddresses(db),
   utxoSumForAddresses: utxoSumForAddresses(db),
-  transactionsHistoryForAddresses: transactionsHistoryForAddresses(db),
+  transactionsHistoryForAddresses: extractRows(transactionsHistoryForAddresses(db)),
   bestBlock: bestBlock(db),
   // legacy
   txSummary: extractRows(txSummary(db)),

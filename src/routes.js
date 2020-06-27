@@ -8,12 +8,16 @@ import type {
   SignedTxRequest,
   DbApi,
   ImporterApi,
+  TxInput,
+  TxOutput,
 } from 'icarus-backend'; // eslint-disable-line
+import { groupBy } from 'lodash'
 
 import { InternalServerError, BadRequestError } from 'restify-errors'
 import moment from 'moment'
 import { version } from '../package.json'
 import { getInstanceHealthStatus } from './healthcheck'
+import { unwrapHashPrefix } from './legacy-routes'
 
 const withPrefix = route => `/api/v2${route}`
 
@@ -104,6 +108,41 @@ const utxoSumForAddresses = (dbApi: DbApi, { logger, apiConfig }: ServerConfig) 
 }
 
 /**
+ * Builds tx entry in the caTxList format
+ * @param {Tx} tx Transaction from database
+ * @param {Array<TxInput>} txInputs Transaction inputs of the tx from database
+ * @param {Array<TxOutput>} txOutputs Transaction outputs of the tx from database
+ * @param {number} bestBlock Most recent block from the database
+ */
+const txHistoryEntry = (
+  tx,
+  txInputs: Array<TxInput>,
+  txOutputs: Array<TxOutput>,
+  bestBlock: number,
+) => ({
+  hash: unwrapHashPrefix(tx.hash),
+  inputs_address: txInputs.map(txInput => txInput.address),
+  inputs_amount: txInputs.map(txInput => txInput.value),
+  outputs_address: txOutputs.map(txOutput => txOutput.address),
+  outputs_amount: txOutputs.map(txOutput => txOutput.value),
+  block_num: `${tx.block_no}`,
+  block_hash: unwrapHashPrefix(tx.blockhash),
+  time: tx.time,
+  tx_state: 'Successful',
+  last_update: tx.time,
+  tx_body: unwrapHashPrefix(tx.body),
+  tx_ordinal: tx.tx_ordinal,
+  inputs: txInputs.map(txInput => ({
+    address: txInput.address,
+    amount: txInput.value,
+    id: `${unwrapHashPrefix(txInput.hash)}${txInput.index}`,
+    index: txInput.index,
+    txHash: unwrapHashPrefix(txInput.hash),
+  })),
+  best_block_num: bestBlock,
+})
+
+/**
  *
  * @param {*} db Database
  * @param {*} Server Config Object
@@ -114,13 +153,20 @@ const transactionsHistory = (dbApi: DbApi, { logger, apiConfig }: ServerConfig) 
   validateAddressesReq(apiConfig.addressesRequestLimit, req.body)
   validateDatetimeReq(req.body)
   logger.debug('[transactionsHistory] request is valid')
-  const result = await dbApi.transactionsHistoryForAddresses(
+  const transactions = await dbApi.transactionsHistoryForAddresses(
     apiConfig.txHistoryResponseLimit,
     req.body.addresses,
     moment(req.body.dateFrom).toDate(),
   )
+  const txIds = transactions.map(tx => tx.id)
+  const txInputMap = groupBy(await dbApi.getTxsInputs(txIds), txInput => txInput.txid)
+  const txOutputMap = groupBy(await dbApi.getTxsOutputs(txIds), txOutput => txOutput.txid)
+  const bestBlock = await dbApi.bestBlock()
+  const txHistory = transactions
+    .map(tx => txHistoryEntry(tx, txInputMap[tx.id], txOutputMap[tx.id], bestBlock))
+
   logger.debug('[transactionsHistory] result calculated')
-  return result.rows
+  return txHistory
 }
 
 /**

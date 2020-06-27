@@ -28,8 +28,8 @@ const getCoinObject = (value: Big | number): CoinObject => ({ getCoin: `${Big(va
  * Database stores all hashes with prefix of '\x'. To hide inner database structure and
  * deal with just the results in common format, these functions wrap and unwrap the hashes.
 */
-const wrapHashPrefix = (hash: string): string => `\\x${hash}`
-const unwrapHashPrefix = (hash: string): string => hash.substr(2)
+export const wrapHashPrefix = (hash: string): string => `\\x${hash}`
+export const unwrapHashPrefix = (hash: string): string => hash.substr(2)
 
 /**
  * Initializes tx input/output entry

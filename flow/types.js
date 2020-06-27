@@ -65,6 +65,8 @@ declare module 'icarus-backend' {
     txid: number,
     address: string,
     value: number,
+    hash: string,
+    index: number,
   }
 
  declare type TxOutput = {
