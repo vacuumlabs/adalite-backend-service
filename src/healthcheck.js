@@ -75,9 +75,9 @@ export async function healthcheckLoop(db: any) {
   const token = process.env.SLACK_TOKEN
   const channelId = process.env.SLACK_CHANNEL
   const rtm = new RTMClient(token)
-  //if (token) {
-  //  rtm.start()
-  //}
+  if (token) {
+    rtm.start()
+  }
 
   while (true) { // eslint-disable-line
     const dbBestBlock = await fetchDbBestBlock(db) // eslint-disable-line
@@ -86,6 +86,7 @@ export async function healthcheckLoop(db: any) {
 
     const isDbSynced = (expectedBestBlock - dbBestBlock <= 5)
 
+    // eslint-disable-next-line no-await-in-loop
     const canSubmitTx = await txTest()
 
     const isHealthy = isDbSynced && canSubmitTx

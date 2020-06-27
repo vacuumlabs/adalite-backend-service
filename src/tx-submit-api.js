@@ -1,5 +1,5 @@
 // @flow
-import {post} from 'axios'
+import { post } from 'axios'
 
 import type { ImporterApi } from 'icarus-backend'; // eslint-disable-line
 
@@ -10,7 +10,7 @@ export default (txSubmitApiUrl: string): ImporterApi => ({
     {
       headers: {
         'Content-Type': 'application/cbor',
-      }
-    }
+      },
+    },
   ),
 })

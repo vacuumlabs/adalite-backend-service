@@ -133,7 +133,7 @@ const getRawTx = (db: Pool) => async (tx: string): Promise<ResultSet> =>
 * @param {Db Object} db
 * @param {Block} blockId
 */
-const getBlockById = (db: Pool) => async (blockId: string): Promise<ResultSet> =>
+const getBlockById = (db: Pool) => async (blockId: number): Promise<ResultSet> =>
   db.query({
     text: 'SELECT time, block_no, hash::text FROM block WHERE id = $1',
     values: [blockId],
@@ -144,7 +144,7 @@ const getBlockById = (db: Pool) => async (blockId: string): Promise<ResultSet> =
 * @param {Db Object} db
 * @param {Transaction} tx
 */
-const getSingleTxInputs = (db: Pool) => async (tx: string): Promise<ResultSet> =>
+const getSingleTxInputs = (db: Pool) => async (tx: number): Promise<ResultSet> =>
   db.query({
     text: `SELECT
       tx_out.address, tx_out.value
@@ -182,9 +182,9 @@ const getTransactions = (db: Pool) => async (addresses: Array<string>): Promise<
 /**
 * Queries TX* tables to acquire bulk tx inputs for given transactions
 * @param {Db Object} db
-* @param {Array<Transaction>} txs
+* @param {Array<Transaction>} txIds
 */
-const getTxsInputs = (db: Pool) => async (txs: Array<string>): Promise<ResultSet> =>
+const getTxsInputs = (db: Pool) => async (txIds: Array<number>): Promise<ResultSet> =>
   db.query({
     text: `SELECT DISTINCT
       tx.id as txId, tx_out.address, tx_out.value, tx2.hash::text, tx_out.index, (tx2.size = 0) 
@@ -193,22 +193,22 @@ const getTxsInputs = (db: Pool) => async (txs: Array<string>): Promise<ResultSet
       INNER JOIN tx_out ON (tx_in.tx_out_id = tx_out.tx_id) AND (tx_in.tx_out_index = tx_out.index) 
       INNER JOIN tx AS tx2 ON tx2.id = tx_in.tx_out_id
       WHERE tx_in.tx_in_id = ANY($1)`,
-    values: [txs],
+    values: [txIds],
   })
 
 /**
 * Queries TX* tables to acquire bulk tx outputs for given transactions
 * @param {Db Object} db
-* @param {Array<Transaction>} txs
+* @param {Array<Transaction>} txIds
 */
-const getTxsOutputs = (db: Pool) => async (txs: Array<string>): Promise<ResultSet> =>
+const getTxsOutputs = (db: Pool) => async (txIds: Array<number>): Promise<ResultSet> =>
   db.query({
     text: `SELECT
       tx.id as txId, tx_out.address, tx_out.value
       FROM tx 
       INNER JOIN tx_out ON tx.id = tx_out.tx_id
       WHERE tx.id = ANY($1)`,
-    values: [txs],
+    values: [txIds],
   })
 
 /**

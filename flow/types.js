@@ -50,10 +50,12 @@ declare module 'icarus-backend' {
       txHash: ?string,
     ) => Promise<ResultSet>,
     bestBlock: () => Promise<number>,
+    getTxsInputs: (txIds: Array<number>) => Promise<Array<Row>>,
+    getTxsOutputs: (txIds: Array<number>) => Promise<Array<Row>>,
   };
 
   declare type ImporterApi = {
-    sendTx: (tx: SignedTx) => AxiosPromise<ImporterResponse>
+    sendTx: (tx: Buffer) => AxiosPromise<ImporterResponse>
   };
 
   declare type ImporterResponse = {
