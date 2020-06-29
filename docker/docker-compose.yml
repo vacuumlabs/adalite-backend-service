@@ -11,7 +11,7 @@ services:
       - cardano-submit-api
     ports:
       - ${ADALITE_BACKEND_HOST_PORT}:8080
-    command: ["./wait-for-it.sh", "cardano-submit-api:8101", "-t", "3600", "--", "/bin/sh", "-c", "yarn start >> /var/log/app/server.log 2>&1"]
+    command: ["./wait-for-it.sh", "cardano-submit-api:8101", "-t", "3600", "--", "/bin/sh", "-c", "yarn knex migrate:latest && yarn start >> /var/log/app/server.log 2>&1"]
     volumes:
       - ${DATA_PATH}/adalite-backend:/var/log/app
     environment:
@@ -27,6 +27,7 @@ services:
       SUBMIT_API_URL: http://cardano-submit-api:8101
       SLACK_TOKEN: ${SLACK_TOKEN}
       SLACK_CHANNEL: ${SLACK_CHANNEL}
+    restart: on-failure
 
   postgres:
     container_name: ${COMPOSE_PROJECT_NAME}-db

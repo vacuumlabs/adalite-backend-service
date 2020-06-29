@@ -8,6 +8,7 @@
     "build": "rm -rf build/ && babel ./src/ --out-dir ./build/",
     "start": "NODE_ENV=production node ./build/index.js | bunyan",
     "dev": "yarn build && export NODE_ENV=develop && nodemon ./build/index.js | bunyan",
+    "migrate": "yarn knex migrate:latest",
     "eslint": "eslint ./src",
     "load-test-db": "node ./scripts/test/load_test_db.js",
     "clean-test-db": "node ./scripts/test/clean_test_db.js",
