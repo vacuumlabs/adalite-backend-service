@@ -56,7 +56,7 @@ const utxoForAddresses = (db: Pool) => async (addresses: Array<string>) =>
 const utxoSumForAddresses = (db: Pool) => async (addresses: Array<string>) =>
   db.query(`SELECT SUM(amount) FROM (${utxoQuery}) as utxo_table`, [addresses])
 
-const txHistory = (limit: number) => `
+const txHistoryQuery = (limit: number) => `
   SELECT txs.id, txs.hash, txs.block_no, txs.blockHash, txs.block_index as tx_ordinal, txs.time, tx_body.body::text from (
       SELECT
         tx.id, tx.hash::text, block.block_no, block.hash::text as blockHash, block.time, tx.block_index
@@ -91,7 +91,7 @@ const transactionsHistoryForAddresses = (db: Pool) => async (
   limit: number,
   addresses: Array<string>,
   dateFrom: Date,
-): Promise<ResultSet> => db.query(txHistory(limit), [addresses, dateFrom])
+): Promise<ResultSet> => db.query(txHistoryQuery(limit), [addresses, dateFrom])
 
 // The remaining queries should be used only for the purposes of the legacy API!
 
@@ -140,7 +140,7 @@ const getBlockById = (db: Pool) => async (blockId: number): Promise<ResultSet> =
   })
 
 /**
-* Quries TX* tables to get txInputs for a given transaction
+* Queries TX* tables to get txInputs for a given transaction
 * @param {Db Object} db
 * @param {Transaction} tx
 */
@@ -162,7 +162,7 @@ const getSingleTxInputs = (db: Pool) => async (tx: number): Promise<ResultSet> =
 */
 const getTransactions = (db: Pool) => async (addresses: Array<string>): Promise<ResultSet> =>
   db.query({
-    text: `SELECT
+    text: `SELECT DISTINCT
       tx.id, tx.hash::text, block.time
       FROM block 
       INNER JOIN tx ON block.id = tx.block 
