@@ -139,7 +139,7 @@ const txHistoryEntry = (
     index: txInput.index,
     txHash: unwrapHashPrefix(txInput.hash),
   })),
-  best_block_num: bestBlock,
+  best_block_num: `${bestBlock}`,
 })
 
 /**
