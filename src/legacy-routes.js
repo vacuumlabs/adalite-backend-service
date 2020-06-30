@@ -62,7 +62,7 @@ const buildTxList = (
   const txInputMap = groupInputsOutputs(txInputs)
   const txOutputMap = groupInputsOutputs(txOutputs)
   const txList: Array<TxEntry> = transactions
-    .map(tx => initializeTxEntry(tx, txInputMap[tx.id], txOutputMap[tx.id]))
+    .map(tx => initializeTxEntry(tx, txInputMap[tx.dbId], txOutputMap[tx.dbId]))
     .sort((a, b) => b.ctbTimeIssued - a.ctbTimeIssued)
   return txList
 }
@@ -80,7 +80,7 @@ const getAddressSummaryForAddresses = async (
   dbApi: any, addresses: Array<string>,
 ) => {
   const txs = await dbApi.getTransactions(addresses)
-  const uniqueTxIds = [...new Set([...txs.map(tx => tx.id)])]
+  const uniqueTxIds = [...new Set([...txs.map(tx => tx.dbId)])]
 
   const txInputs = await dbApi.getTxsInputs(uniqueTxIds)
   const txOutputs = await dbApi.getTxsOutputs(uniqueTxIds)
@@ -134,8 +134,8 @@ const txSummary = (dbApi: any, { logger }: ServerConfig) => async (req: any,
   const blockResult = await dbApi.getBlockById(txRow.block)
   const blockRow = blockResult[0]
 
-  const inputs = await dbApi.getSingleTxInputs(txRow.id)
-  const outputs = await dbApi.getTxsOutputs([txRow.id])
+  const inputs = await dbApi.getSingleTxInputs(txRow.dbId)
+  const outputs = await dbApi.getTxsOutputs([txRow.dbId])
 
   const totalInput = arraySum(inputs.map(elem => elem.value))
   const totalOutput = arraySum(outputs.map(elem => elem.value))

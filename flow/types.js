@@ -85,7 +85,7 @@ declare module 'icarus-backend' {
   }
 
   declare type Tx = {
-    id: number,
+    dbId: number,
     hash: string,
     time: Date,
   }

@@ -114,7 +114,7 @@ const txSummary = (db: Pool) => async (tx: string): Promise<ResultSet> =>
 */
 const getTx = (db: Pool) => async (tx: string): Promise<ResultSet> =>
   db.query({
-    text: 'SELECT id, block, hash::text FROM "tx" WHERE hash = $1',
+    text: 'SELECT id as "dbId", block, hash::text FROM "tx" WHERE hash = $1',
     values: [tx],
   })
 
@@ -164,14 +164,14 @@ const getSingleTxInputs = (db: Pool) => async (tx: number): Promise<ResultSet> =
 const getTransactions = (db: Pool) => async (addresses: Array<string>): Promise<ResultSet> =>
   db.query({
     text: `SELECT DISTINCT
-      tx.id, tx.hash::text, block.time
+      tx.id as "dbId", tx.hash::text, block.time
       FROM block 
       INNER JOIN tx ON block.id = tx.block 
       INNER JOIN tx_out ON tx.id = tx_out.tx_id
       WHERE tx_out.address = ANY($1)
     UNION
     SELECT DISTINCT 
-      tx.id, tx.hash::text, block.time
+      tx.id as "dbId", tx.hash::text, block.time
       FROM block 
       INNER JOIN tx ON block.id = tx.block 
       INNER JOIN tx_in ON tx.id = tx_in.tx_in_id 
