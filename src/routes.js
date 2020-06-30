@@ -16,7 +16,7 @@ import { InternalServerError, BadRequestError } from 'restify-errors'
 import moment from 'moment'
 import { version } from '../package.json'
 import { getInstanceHealthStatus } from './healthcheck'
-import { unwrapHashPrefix, groupInputsOutputs } from './legacy-routes'
+import { unwrapHashPrefix, groupInputsOutputs } from './helpers'
 
 const withPrefix = route => `/api/v2${route}`
 

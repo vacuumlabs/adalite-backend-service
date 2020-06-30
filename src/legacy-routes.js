@@ -3,7 +3,6 @@
 import { isValidAddress } from 'cardano-crypto.js'
 import moment from 'moment'
 import Big from 'big.js'
-import { _ } from 'lodash'
 
 import type {
   ServerConfig,
@@ -14,6 +13,7 @@ import type {
   Tx,
   CoinObject,
 } from 'icarus-backend'; // eslint-disable-line
+import { wrapHashPrefix, unwrapHashPrefix, groupInputsOutputs } from './helpers'
 
 const withPrefix = route => `/api${route}`
 const invalidAddress = 'Invalid Cardano address!'
@@ -23,19 +23,6 @@ const arraySum = (
   numbers: Array<Big | number>,
 ): Big => numbers.reduce((acc: Big, val) => acc.plus(Big(val)), Big(0))
 const getCoinObject = (value: Big | number): CoinObject => ({ getCoin: `${Big(value)}` })
-
-/**
- * Database stores all hashes with prefix of '\x'. To hide inner database structure and
- * deal with just the results in common format, these functions wrap and unwrap the hashes.
-*/
-export const wrapHashPrefix = (hash: string): string => `\\x${hash}`
-export const unwrapHashPrefix = (hash: string): string => hash.substr(2)
-// retain original order of 'index' of inputs or outputs in a transaction
-export const groupInputsOutputs = (
-  txInputsOutputs: Array<TxInput> | Array<TxOutput>,
-) => _(txInputsOutputs)
-  .groupBy(tx => tx.txid)
-  .each(group => group.sort((a, b) => a.index - b.index))
 
 /**
  * Initializes tx input/output entry
