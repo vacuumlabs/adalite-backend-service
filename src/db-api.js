@@ -205,7 +205,7 @@ const getTxsInputs = (db: Pool) => async (txIds: Array<number>): Promise<ResultS
 const getTxsOutputs = (db: Pool) => async (txIds: Array<number>): Promise<ResultSet> =>
   db.query({
     text: `SELECT
-      tx.id as txId, tx_out.address, tx_out.value
+      tx.id as txId, tx_out.address, tx_out.value, tx_out.index
       FROM tx 
       INNER JOIN tx_out ON tx.id = tx_out.tx_id
       WHERE tx.id = ANY($1)`,

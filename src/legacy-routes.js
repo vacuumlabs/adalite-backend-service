@@ -3,7 +3,7 @@
 import { isValidAddress } from 'cardano-crypto.js'
 import moment from 'moment'
 import Big from 'big.js'
-import { groupBy } from 'lodash'
+import { _ } from 'lodash'
 
 import type {
   ServerConfig,
@@ -30,6 +30,12 @@ const getCoinObject = (value: Big | number): CoinObject => ({ getCoin: `${Big(va
 */
 export const wrapHashPrefix = (hash: string): string => `\\x${hash}`
 export const unwrapHashPrefix = (hash: string): string => hash.substr(2)
+// retain original order of 'index' of inputs or outputs in a transaction
+export const groupInputsOutputs = (
+  txInputsOutputs: Array<TxInput> | Array<TxOutput>,
+) => _(txInputsOutputs)
+  .groupBy(tx => tx.txid)
+  .each(group => group.sort((a, b) => a.index - b.index))
 
 /**
  * Initializes tx input/output entry
@@ -66,8 +72,8 @@ const buildTxList = (
   txInputs: Array<TxInput>,
   txOutputs: Array<TxOutput>,
 ) => {
-  const txInputMap = groupBy(txInputs, txInput => txInput.txid)
-  const txOutputMap = groupBy(txOutputs, txOutput => txOutput.txid)
+  const txInputMap = groupInputsOutputs(txInputs)
+  const txOutputMap = groupInputsOutputs(txOutputs)
   const txList: Array<TxEntry> = transactions
     .map(tx => initializeTxEntry(tx, txInputMap[tx.id], txOutputMap[tx.id]))
     .sort((a, b) => b.ctbTimeIssued - a.ctbTimeIssued)
@@ -203,7 +209,7 @@ const unspentTxOutputs = (dbApi: any, { logger, apiConfig }: ServerConfig) => as
   const result = await dbApi.utxoLegacy(addresses)
   const mappedRows = result.map((row) => (
     {
-      ...row, // TODO/hrafn experiment with \x format and transaction signing
+      ...row,
       cuId: unwrapHashPrefix(row.cuId),
       cuCoins: getCoinObject(row.cuCoins),
     }

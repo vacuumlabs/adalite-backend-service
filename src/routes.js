@@ -11,13 +11,12 @@ import type {
   TxInput,
   TxOutput,
 } from 'icarus-backend'; // eslint-disable-line
-import { groupBy } from 'lodash'
 
 import { InternalServerError, BadRequestError } from 'restify-errors'
 import moment from 'moment'
 import { version } from '../package.json'
 import { getInstanceHealthStatus } from './healthcheck'
-import { unwrapHashPrefix } from './legacy-routes'
+import { unwrapHashPrefix, groupInputsOutputs } from './legacy-routes'
 
 const withPrefix = route => `/api/v2${route}`
 
@@ -159,8 +158,8 @@ const transactionsHistory = (dbApi: DbApi, { logger, apiConfig }: ServerConfig) 
     moment(req.body.dateFrom).toDate(),
   )
   const txIds = transactions.map(tx => tx.id)
-  const txInputMap = groupBy(await dbApi.getTxsInputs(txIds), txInput => txInput.txid)
-  const txOutputMap = groupBy(await dbApi.getTxsOutputs(txIds), txOutput => txOutput.txid)
+  const txInputMap = groupInputsOutputs(await dbApi.getTxsInputs(txIds))
+  const txOutputMap = groupInputsOutputs(await dbApi.getTxsOutputs(txIds))
   const bestBlock = await dbApi.bestBlock()
   const txHistory = transactions
     .map(tx => txHistoryEntry(tx, txInputMap[tx.id], txOutputMap[tx.id], bestBlock))

@@ -75,6 +75,7 @@ declare module 'icarus-backend' {
     txid: number,
     address: string,
     value: number,
+    index: number,
   }
 
   declare type TxInputOutputEntry = [string, CoinObject]
