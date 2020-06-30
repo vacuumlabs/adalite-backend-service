@@ -44,6 +44,7 @@ services:
     restart: on-failure
 
   cardano-node:
+    container_name: ${COMPOSE_PROJECT_NAME}-cardano-node
     image: inputoutput/cardano-node:master
     environment:
       - NETWORK=${NETWORK}
@@ -52,6 +53,7 @@ services:
       - ${DATA_PATH}/node-ipc:/ipc
 
   cardano-db-sync:
+    container_name: ${COMPOSE_PROJECT_NAME}-cardano-db-sync
     image: hrafnar/cardano-db-sync:latest
     environment:
       - NETWORK=${NETWORK}
@@ -72,6 +74,7 @@ services:
     restart: on-failure
 
   cardano-explorer-api: # TODO: remove, not used outside testing
+    container_name: ${COMPOSE_PROJECT_NAME}-cardano-explorer-api
     image: inputoutput/cardano-explorer-api:master
     depends_on:
       - postgres
@@ -87,6 +90,7 @@ services:
     restart: on-failure
 
   cardano-submit-api:
+    container_name: ${COMPOSE_PROJECT_NAME}-cardano-submit-api
     image: inputoutput/cardano-submit-api:master
     environment:
       - NETWORK=${NETWORK}
