@@ -57,7 +57,7 @@ const utxoSumForAddresses = (db: Pool) => async (addresses: Array<string>) =>
   db.query(`SELECT SUM(amount) FROM (${utxoQuery}) as utxo_table`, [addresses])
 
 const txHistoryQuery = (limit: number) => `
-  SELECT txs.id, txs.hash, txs.block_no, txs.blockHash, txs.block_index as tx_ordinal, txs.time, txs.body::text from (
+  SELECT txs.id as "dbId", txs.hash, txs.block_no, txs.blockHash, txs.block_index as tx_ordinal, txs.time, txs.body::text from (
       SELECT                                                                                                              
         tx.id, tx.hash::text, block.block_no, block.hash::text as blockHash, block.time, tx.block_index, tx_body.body::text                  
         FROM block                                                                                                        
@@ -188,7 +188,7 @@ const getTransactions = (db: Pool) => async (addresses: Array<string>): Promise<
 const getTxsInputs = (db: Pool) => async (txIds: Array<number>): Promise<ResultSet> =>
   db.query({
     text: `SELECT DISTINCT
-      tx.id as txId, tx_out.address, tx_out.value, tx2.hash::text, tx_out.index, (tx2.size = 0) 
+      tx.id as "txDbId", tx_out.address, tx_out.value, tx2.hash::text, tx_out.index, (tx2.size = 0) 
       FROM tx
       INNER JOIN tx_in ON tx.id = tx_in.tx_in_id 
       INNER JOIN tx_out ON (tx_in.tx_out_id = tx_out.tx_id) AND (tx_in.tx_out_index = tx_out.index) 
@@ -205,7 +205,7 @@ const getTxsInputs = (db: Pool) => async (txIds: Array<number>): Promise<ResultS
 const getTxsOutputs = (db: Pool) => async (txIds: Array<number>): Promise<ResultSet> =>
   db.query({
     text: `SELECT
-      tx.id as txId, tx_out.address, tx_out.value, tx_out.index
+      tx.id as "txDbId", tx_out.address, tx_out.value, tx_out.index
       FROM tx 
       INNER JOIN tx_out ON tx.id = tx_out.tx_id
       WHERE tx.id = ANY($1)`,

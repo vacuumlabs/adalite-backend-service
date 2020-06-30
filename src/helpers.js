@@ -14,5 +14,5 @@ export const unwrapHashPrefix = (hash: string): string => hash.substr(2)
 export const groupInputsOutputs = (
   txInputsOutputs: Array<TxInput> | Array<TxOutput>,
 ) => _(txInputsOutputs)
-  .groupBy(tx => tx.txid)
+  .groupBy(tx => tx.txDbId)
   .each(group => group.sort((a, b) => a.index - b.index))

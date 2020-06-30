@@ -157,12 +157,12 @@ const transactionsHistory = (dbApi: DbApi, { logger, apiConfig }: ServerConfig) 
     req.body.addresses,
     moment(req.body.dateFrom).toDate(),
   )
-  const txIds = transactions.map(tx => tx.id)
+  const txIds = transactions.map(tx => tx.dbId)
   const txInputMap = groupInputsOutputs(await dbApi.getTxsInputs(txIds))
   const txOutputMap = groupInputsOutputs(await dbApi.getTxsOutputs(txIds))
   const bestBlock = await dbApi.bestBlock()
   const txHistory = transactions
-    .map(tx => txHistoryEntry(tx, txInputMap[tx.id], txOutputMap[tx.id], bestBlock))
+    .map(tx => txHistoryEntry(tx, txInputMap[tx.dbId], txOutputMap[tx.dbId], bestBlock))
 
   logger.debug('[transactionsHistory] result calculated')
   return txHistory
