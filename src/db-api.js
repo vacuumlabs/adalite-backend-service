@@ -1,6 +1,6 @@
 // @flow
 
-import type { Pool, ResultSet } from 'pg'
+import type { Pool } from 'pg'
 import type {
   DbApi,
   TypedResultSet,
@@ -40,12 +40,6 @@ const filterUsedAddresses = (db: Pool) => async (
     values: [addresses],
     rowMode: 'array',
   }): any)
-
-const unspentAddresses = (db: Pool) => async (): Promise<ResultSet> => // TODO/delete
-  db.query({
-    text: 'SELECT DISTINCT utxos.receiver FROM utxos',
-    rowMode: 'array',
-  })
 
 const utxoQuery = `SELECT 
   TRIM(LEADING '\\x' from tx.hash::text) AS "tx_hash", tx_out.index AS "tx_index",
@@ -253,7 +247,6 @@ const bestBlock = (db: Pool) => async (): Promise<number> => {
 
 export default (db: Pool): DbApi => ({
   filterUsedAddresses: extractRows(filterUsedAddresses(db)),
-  unspentAddresses: unspentAddresses(db),
   utxoForAddresses: extractRows(utxoForAddresses(db)),
   utxoSumForAddresses: extractRows(utxoSumForAddresses(db)),
   transactionsHistoryForAddresses: extractRows(transactionsHistoryForAddresses(db)),

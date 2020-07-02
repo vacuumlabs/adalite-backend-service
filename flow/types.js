@@ -1,5 +1,4 @@
 import type { Logger } from 'bunyan'
-import type { ResultSet } from 'pg'
 import type { AxiosPromise } from 'axios'
 
 declare module 'icarus-backend' {
@@ -47,7 +46,6 @@ declare module 'icarus-backend' {
 
   declare type DbApi = {
     filterUsedAddresses: (addresses: Array<string>) => Promise<Array<UsedAddressDbResult>>,
-    unspentAddresses: () => Promise<ResultSet>,
     utxoForAddresses: (addresses: Array<string>) => Promise<Array<UtxoForAddressesDbResult>>,
     utxoSumForAddresses: (addresses: Array<string>) => Promise<Array<UtxoSumDbResult>>,
     transactionsHistoryForAddresses: (

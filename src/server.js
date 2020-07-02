@@ -1,7 +1,6 @@
 // @flow
 import type { Pool } from 'pg' // eslint-disable-line
 import { merge } from 'lodash' // eslint-disable-line
-import { Server as WebSocketServer } from 'ws'
 import corsMiddleware from 'restify-cors-middleware'
 import restifyBunyanLogger from 'restify-bunyan-logger'
 import restify from 'restify'
@@ -10,7 +9,6 @@ import routes from './routes'
 import legacyRoutes from './legacy-routes'
 import importerApi from './tx-submit-api'
 import dbApi from './db-api'
-import manageConnections from './ws-connections'
 import createDB from './db'
 import configCleanup from './cleanup'
 import { healthcheckLoop } from './healthcheck'
@@ -73,9 +71,6 @@ async function createServer() {
       }
     })
   })
-
-  const wss = new WebSocketServer({ server })
-  wss.on('connection', manageConnections(dbApi(db), serverConfig))
 
   configCleanup(db, logger)
 
