@@ -73,22 +73,6 @@ services:
       - ${DATA_PATH}/db-sync-tmp:/tmp
     restart: on-failure
 
-  cardano-explorer-api: # TODO: remove, not used outside testing
-    container_name: ${COMPOSE_PROJECT_NAME}-cardano-explorer-api
-    image: inputoutput/cardano-explorer-api:master
-    depends_on:
-      - postgres
-      - cardano-db-sync
-    environment:
-      - POSTGRES_HOST=postgres
-      - POSTGRES_PORT=5432
-      - POSTGRES_DB=${POSTGRES_DB}
-      - POSTGRES_USER=cexplorer
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-    ports:
-      - ${ADALITE_CARDANO_EXPLORER_HOST_PORT}:8100
-    restart: on-failure
-
   cardano-submit-api:
     container_name: ${COMPOSE_PROJECT_NAME}-cardano-submit-api
     image: inputoutput/cardano-submit-api:master
