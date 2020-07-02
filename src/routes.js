@@ -10,6 +10,8 @@ import type {
   ImporterApi,
   TxInput,
   TxOutput,
+  UtxoForAddressesDbResult,
+  TxHistoryEntry,
 } from 'icarus-backend'; // eslint-disable-line
 
 import { InternalServerError, BadRequestError } from 'restify-errors'
@@ -68,11 +70,12 @@ const utxoForAddresses = (dbApi: DbApi, { logger, apiConfig }: ServerConfig) => 
   logger.debug('[utxoForAddresses] request is valid')
   const result = await dbApi.utxoForAddresses(req.body.addresses)
   logger.debug('[utxoForAddresses] result calculated')
-  return result.rows.map(row => (
+  return (result.map(row => (
     {
       utxo_id: `${row.tx_hash}${row.tx_index}`,
       ...row,
-    }))
+    }),
+  ): Array<UtxoForAddressesDbResult>)
 }
 
 /**
@@ -88,7 +91,7 @@ const filterUsedAddresses = (dbApi: DbApi, { logger, apiConfig }: ServerConfig) 
   logger.debug('[filterUsedAddresses] request is valid')
   const result = await dbApi.filterUsedAddresses(req.body.addresses)
   logger.debug('[filterUsedAddresses] result calculated')
-  return result.rows.reduce((acc, row) => acc.concat(row), [])
+  return (result.reduce((acc, row) => acc.concat(row), []): Array<string>)
 }
 
 /**
@@ -103,7 +106,7 @@ const utxoSumForAddresses = (dbApi: DbApi, { logger, apiConfig }: ServerConfig) 
   logger.debug('[utxoSumForAddresses] request is valid')
   const result = await dbApi.utxoSumForAddresses(req.body.addresses)
   logger.debug('[utxoSumForAddresses] result calculated')
-  return result.rows[0]
+  return result[0]
 }
 
 /**
@@ -165,7 +168,7 @@ const transactionsHistory = (dbApi: DbApi, { logger, apiConfig }: ServerConfig) 
     .map(tx => txHistoryEntry(tx, txInputMap[tx.dbId], txOutputMap[tx.dbId], bestBlock))
 
   logger.debug('[transactionsHistory] result calculated')
-  return txHistory
+  return (txHistory: Array<TxHistoryEntry>)
 }
 
 /**

@@ -131,7 +131,7 @@ const txSummary = (dbApi: any, { logger }: ServerConfig) => async (req: any,
   if (txResult.length === 0) return { Left: invalidTx }
 
   const txRow = txResult[0]
-  const blockResult = await dbApi.getBlockById(txRow.block)
+  const blockResult = await dbApi.getBlockById(txRow.blockId)
   const blockRow = blockResult[0]
 
   const inputs = await dbApi.getSingleTxInputs(txRow.dbId)
