@@ -5,7 +5,7 @@ describe('Healthcheck endpoint', () => {
   it('Should return package.json version', async () =>
     runInServer(api =>
       api
-        .get('/healthcheck')
+        .get('/v2/healthcheck')
         .expectValue('version', packageJson.version)
         .end(),
     ))
