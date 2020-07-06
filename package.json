@@ -14,7 +14,7 @@
     "clean-test-db": "node ./scripts/test/clean_test_db.js",
     "transpile-tests": "babel ./test/ --out-dir ./build-test/",
     "unit-tests": "yarn build && yarn transpile-tests && mocha \"build-test/unit/**/*.js\"",
-    "integration-tests": "yarn transpile-tests && NODE_ENV=test yarn load-test-db && NODE_ENV=test mocha \"build-test/integration/**/*.js\"",
+    "integration-tests": "yarn transpile-tests && NODE_ENV=test yarn load-test-db && NODE_ENV=test mocha \"build-test/integration/legacy/**/*.js\"",
     "all-tests": "yarn unit-tests && yarn integration-tests",
     "coverage": "yarn all-tests",
     "postintegration-tests": "NODE_ENV=test yarn clean-test-db"
