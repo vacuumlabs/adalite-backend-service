@@ -2,7 +2,10 @@ import { expect } from 'chai'
 import shuffle from 'shuffle-array'
 import { runInServer, assertOnResults } from './test-utils'
 
-const ENDPOINT = '/txs/utxoForAddresses'
+const ENDPOINT = '/v2/txs/utxoForAddresses'
+
+// To avoid Possible EventEmitter memory leak detected message
+process.setMaxListeners(0)
 
 describe('UtxoForAddresses endpoint', () => {
   it('should return empty if addresses do not exist', async () =>
@@ -21,34 +24,33 @@ describe('UtxoForAddresses endpoint', () => {
 
   it('should return data for addresses balance once even if sent twice', async () => {
     const usedAddresses = [
-      'DdzFFzCqrhshvqw9GrHmSw6ySwViBj5cj2njWj5mbnLu4uNauJCKuXhHS3wNUoGRNBGGTkyTFDQNrUWMumZ3mxarAjoXiYvyhead7yKQ',
-      'DdzFFzCqrhshvqw9GrHmSw6ySwViBj5cj2njWj5mbnLu4uNauJCKuXhHS3wNUoGRNBGGTkyTFDQNrUWMumZ3mxarAjoXiYvyhead7yKQ',
+      'DdzFFzCqrhswkXmoWjcFTDEB3AnAJSqcf7FPsjcesTGfu9zSmCc2Nn2aufdgoQ8zPxQHkdkqfixejHnQejVbm4MQCsd88dCywQqYZEEk',
+      'DdzFFzCqrhswkXmoWjcFTDEB3AnAJSqcf7FPsjcesTGfu9zSmCc2Nn2aufdgoQ8zPxQHkdkqfixejHnQejVbm4MQCsd88dCywQqYZEEk',
     ]
 
     return runInServer(api =>
       api
         .post(ENDPOINT)
         .send({ addresses: usedAddresses })
-        .expectBody([
-          {
-            utxo_id:
-              '6cc6d736e3a4395acabfae4c7cfe409b65d8c7c6bbf9ff85a0bd4a95334b7a5f0',
-            tx_hash:
-              '6cc6d736e3a4395acabfae4c7cfe409b65d8c7c6bbf9ff85a0bd4a95334b7a5f',
-            tx_index: 0,
-            receiver:
-              'DdzFFzCqrhshvqw9GrHmSw6ySwViBj5cj2njWj5mbnLu4uNauJCKuXhHS3wNUoGRNBGGTkyTFDQNrUWMumZ3mxarAjoXiYvyhead7yKQ',
-            amount: '1463071700828754',
-          },
-        ])
+        .expectBody([{
+          utxo_id:
+            '2afb190a0b9fe21cb014d5b21ae5321fbb1585cee9a34a9ae87aba05a46472650',
+          tx_hash:
+            '2afb190a0b9fe21cb014d5b21ae5321fbb1585cee9a34a9ae87aba05a4647265',
+          tx_index: 0,
+          receiver:
+            'DdzFFzCqrhswkXmoWjcFTDEB3AnAJSqcf7FPsjcesTGfu9zSmCc2Nn2aufdgoQ8zPxQHkdkqfixejHnQejVbm4MQCsd88dCywQqYZEEk',
+          amount: '390053000000',
+          block_num: 27654,
+        }])
         .end(),
     )
   })
 
   it('should filter unused addresses', async () => {
     const usedAddresses = [
-      'DdzFFzCqrhshvqw9GrHmSw6ySwViBj5cj2njWj5mbnLu4uNauJCKuXhHS3wNUoGRNBGGTkyTFDQNrUWMumZ3mxarAjoXiYvyhead7yKQ',
-      'DdzFFzCqrhskrzzPrXynkZ3gteGy8GmWYrswqz9SueoFP9PV5suFnGv9sQqg3o5pxzFpDTJ2HFJzHrThxBYarQi8guzMUhuiePB1T6ff',
+      'DdzFFzCqrht7tzd7P6aAWkqiF91p8vLSdBWdnTExD7prn7uojmbDdLVsKBs7hANQDSvGixzVeTTwQXaTqJ4LNLNDkNb69PVqxDZn4fCd',
+      'DdzFFzCqrht59BgECpEq8Xtnw95Yz1y1vnLC9kBAh7rr6dcBM2pEfV9nfJoKSCn59uRMPW89xoLSRCaXGehbVzYDVp4CnQmepLE8trrs',
     ]
 
     const unusedAddresses = [
@@ -57,28 +59,28 @@ describe('UtxoForAddresses endpoint', () => {
       'DdzFFzCqrht8d5FeU62PpBw1e3JLUP48LKfDfNtUyfuBJjBEqmgfYpwcbNHCh3csA4DEzu7SYquoUdmkcknR1E1D6zz5byvpMx632VJx',
     ]
 
-    const expectedUTOXs = [
-      {
-        utxo_id:
-          '6cc6d736e3a4395acabfae4c7cfe409b65d8c7c6bbf9ff85a0bd4a95334b7a5f0',
-        tx_hash:
-          '6cc6d736e3a4395acabfae4c7cfe409b65d8c7c6bbf9ff85a0bd4a95334b7a5f',
-        tx_index: 0,
-        receiver:
-          'DdzFFzCqrhshvqw9GrHmSw6ySwViBj5cj2njWj5mbnLu4uNauJCKuXhHS3wNUoGRNBGGTkyTFDQNrUWMumZ3mxarAjoXiYvyhead7yKQ',
-        amount: '1463071700828754',
-      },
-      {
-        utxo_id:
-          'aba9ad6b8360542698038dea31ca23037ad933c057abc18c5c17c2c63dbc3d131',
-        tx_hash:
-          'aba9ad6b8360542698038dea31ca23037ad933c057abc18c5c17c2c63dbc3d13',
-        tx_index: 1,
-        receiver:
-          'DdzFFzCqrhskrzzPrXynkZ3gteGy8GmWYrswqz9SueoFP9PV5suFnGv9sQqg3o5pxzFpDTJ2HFJzHrThxBYarQi8guzMUhuiePB1T6ff',
-        amount: '9829100',
-      },
-    ]
+    const expectedUTOXs = [{
+      utxo_id:
+        '6f63d6bac05093a44712aa6cd0e94d63793a370ffd50bb3f61a0a1ed6fb3482c0',
+      tx_hash:
+        '6f63d6bac05093a44712aa6cd0e94d63793a370ffd50bb3f61a0a1ed6fb3482c',
+      tx_index: 0,
+      receiver:
+        'DdzFFzCqrht7tzd7P6aAWkqiF91p8vLSdBWdnTExD7prn7uojmbDdLVsKBs7hANQDSvGixzVeTTwQXaTqJ4LNLNDkNb69PVqxDZn4fCd',
+      amount: '390384000000',
+      block_num: 27655,
+    },
+    {
+      utxo_id:
+        '71d2b2fa15d7976e6dabb44e5fcc52eaddb9143271e0f39d26d1e8c29d2172f10',
+      tx_hash:
+        '71d2b2fa15d7976e6dabb44e5fcc52eaddb9143271e0f39d26d1e8c29d2172f1',
+      tx_index: 0,
+      receiver:
+        'DdzFFzCqrht59BgECpEq8Xtnw95Yz1y1vnLC9kBAh7rr6dcBM2pEfV9nfJoKSCn59uRMPW89xoLSRCaXGehbVzYDVp4CnQmepLE8trrs',
+      amount: '2619215000000',
+      block_num: 27656,
+    }]
 
     const addresses = shuffle(usedAddresses.concat(unusedAddresses))
     return runInServer(api =>
