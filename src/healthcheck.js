@@ -33,10 +33,10 @@ async function fetchExpectedBestBlock(): Promise<number> {
           cardano: {
             tip: {
               number: blockHeight,
-            }
+            },
           },
         },
-      }
+      },
     } = (await axios.post(
       'https://explorer.cardano-mainnet.iohk.io/graphql',
       {

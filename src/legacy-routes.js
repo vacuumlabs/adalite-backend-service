@@ -80,7 +80,7 @@ const getAddressSummaryForAddresses = async (
   dbApi: any, addresses: Array<string>,
 ) => {
   const txs = await dbApi.getTransactions(addresses)
-  const uniqueTxIds = [...new Set([...txs.map(tx => tx.dbId)])]
+  const uniqueTxIds = [...new Set(txs.map(tx => tx.dbId))]
 
   const txInputs = await dbApi.getTxsInputs(uniqueTxIds)
   const txOutputs = await dbApi.getTxsOutputs(uniqueTxIds)
