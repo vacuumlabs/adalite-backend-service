@@ -37,12 +37,10 @@ describe('Routes', () => {
   // This returns fake data. It's ok if they are not real objects (for example utxo or txs)
   // as we are checking the response is being returned, not the queries
   const dbApi = {
-    filterUsedAddresses: sinon.fake.resolves({ rows: [['a1', 'a2']] }),
-    utxoForAddresses: sinon.fake.resolves({ rows: ['utxo1', 'utxo2'] }),
-    utxoSumForAddresses: sinon.fake.resolves({ rows: [10, 20] }),
-    transactionsHistoryForAddresses: sinon.fake.resolves({
-      rows: ['tx1', 'tx2'],
-    }),
+    filterUsedAddresses: sinon.fake.resolves([['a1', 'a2']]),
+    utxoForAddresses: sinon.fake.resolves(['utxo1', 'utxo2']),
+    utxoSumForAddresses: sinon.fake.resolves([10, 20]),
+    transactionsHistoryForAddresses: sinon.fake.resolves(['tx1', 'tx2']),
     unspentAddresses: sinon.fake.resolves([]),
   }
 
