@@ -27,7 +27,7 @@ services:
       SUBMIT_API_URL: http://cardano-submit-api:8101
       SLACK_TOKEN: ${SLACK_TOKEN}
       SLACK_CHANNEL: ${SLACK_CHANNEL}
-    restart: on-failure
+    restart: unless-stopped
 
   postgres:
     container_name: ${COMPOSE_PROJECT_NAME}-db
@@ -42,7 +42,7 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     volumes:
       - ${DATA_PATH}/postgres:/var/lib/postgresql/data
-    restart: on-failure
+    restart: unless-stopped
 
   cardano-node:
     container_name: ${COMPOSE_PROJECT_NAME}-cardano-node
@@ -52,6 +52,7 @@ services:
     volumes:
       - ${DATA_PATH}/node-db:/data/db
       - ${DATA_PATH}/node-ipc:/ipc
+    restart: unless-stopped
 
   cardano-db-sync:
     container_name: ${COMPOSE_PROJECT_NAME}-cardano-db-sync
@@ -72,7 +73,7 @@ services:
     volumes:
       - ${DATA_PATH}/node-ipc:/node-ipc
       - ${DATA_PATH}/db-sync-tmp:/tmp
-    restart: on-failure
+    restart: unless-stopped
 
   cardano-submit-api:
     container_name: ${COMPOSE_PROJECT_NAME}-cardano-submit-api
@@ -85,7 +86,7 @@ services:
       - ${DATA_PATH}/node-ipc:/node-ipc
     ports:
       - ${ADALITE_SUBMIT_API_HOST_PORT}:8101
-    restart: on-failure
+    restart: unless-stopped
 
 volumes:
   postgres:

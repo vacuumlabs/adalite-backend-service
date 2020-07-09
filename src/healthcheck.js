@@ -31,14 +31,16 @@ async function fetchExpectedBestBlock(): Promise<number> {
       data: {
         data: {
           cardano: {
-            blockHeight,
+            tip: {
+              number: blockHeight,
+            }
           },
         },
-      },
+      }
     } = (await axios.post(
       'https://explorer.cardano-mainnet.iohk.io/graphql',
       {
-        query: 'query cardanoDynamic {\n  cardano {\n    blockHeight\n    currentEpoch {\n      blocks(limit: 1, order_by: {number: desc_nulls_last}) {\n        slotWithinEpoch\n      }\n      lastBlockTime\n      number\n    }\n  }\n}\n',
+        query: 'query cardanoDynamic {\n  cardano {\n    tip {\n      number\n      slotWithinEpoch\n      createdAt\n    }\n    currentEpoch {\n      number\n    }\n  }\n}\n',
         variables: {},
       },
     ))
