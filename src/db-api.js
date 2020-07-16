@@ -245,6 +245,23 @@ const bestBlock = (db: Pool) => async (): Promise<number> => {
   return query.rows.length > 0 ? parseInt(query.rows[0].block_no, 10) : 0
 }
 
+/**
+ * Gets valid pools and their information
+ * @param {Db Object} db
+ */
+const stakePoolsInfo = (db: Pool) => async ()
+: Promise<TypedResultSet<any>> =>// TODO:TODO: type after it's clear what we need
+  (db.query({
+    text: `SELECT      
+      DISTINCT ON (ph.hash) RIGHT(ph.hash::text, -2) as pool_hash, p.registered_tx_id, p.pledge, p.reward_addr_id,
+        p.margin, p.fixed_cost, pmd.url, RIGHT(po.hash::text, -2) as owner_hash
+      FROM pool_update AS p
+      LEFT JOIN pool_meta_data AS pmd ON p.meta=pmd.id
+      LEFT JOIN pool_hash AS ph ON p.hash_id=ph.id
+      LEFT JOIN pool_owner AS po ON po.pool_id=ph.id
+      ORDER BY ph.hash, p.registered_tx_id DESC`, // TODO:also not retired?
+  }): any)
+
 export default (db: Pool): DbApi => ({
   filterUsedAddresses: extractRows(filterUsedAddresses(db)),
   utxoForAddresses: extractRows(utxoForAddresses(db)),
@@ -260,4 +277,5 @@ export default (db: Pool): DbApi => ({
   getTransactions: extractRows(getTransactions(db)),
   getTxsInputs: extractRows(getTxsInputs(db)),
   getTxsOutputs: extractRows(getTxsOutputs(db)),
+  stakePoolsInfo: extractRows(stakePoolsInfo(db)),
 })

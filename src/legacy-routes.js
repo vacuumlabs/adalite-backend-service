@@ -12,6 +12,7 @@ import type {
   TxEntry,
   Tx,
   CoinObject,
+  DbApi,
 } from 'icarus-backend'; // eslint-disable-line
 import { wrapHashPrefix, unwrapHashPrefix, groupInputsOutputs } from './helpers'
 
@@ -226,6 +227,13 @@ const bulkAddressSummary = (dbApi: any, { logger, apiConfig }: ServerConfig) => 
   return { Right: { caAddresses: addresses, ...addressSummaryResult } }
 }
 
+const stakePools = (dbApi: DbApi, { logger }: ServerConfig) => async () => {
+  logger.debug('[stakePools] query started')
+  const result = await dbApi.stakePoolsInfo()
+  logger.debug('[stakePools] query finished')
+  return result
+}
+
 export default {
   addressSummary: {
     method: 'get',
@@ -251,5 +259,10 @@ export default {
     method: 'post',
     path: withPrefix('/bulk/addresses/summary'),
     handler: bulkAddressSummary,
+  },
+  stakePools: {
+    method: 'get',
+    path: withPrefix('/stakePools'),
+    handler: stakePools,
   },
 }
