@@ -227,11 +227,45 @@ const bulkAddressSummary = (dbApi: any, { logger, apiConfig }: ServerConfig) => 
   return { Right: { caAddresses: addresses, ...addressSummaryResult } }
 }
 
+/**
+ * Gets all valid stake pools and their information
+ * @param {*} db Database
+ * @param {*} Server Server Config Object
+ */
 const stakePools = (dbApi: DbApi, { logger }: ServerConfig) => async () => {
   logger.debug('[stakePools] query started')
   const result = await dbApi.stakePoolsInfo()
   logger.debug('[stakePools] query finished')
   return result
+}
+
+/**
+ * Helper for getting information for a single pool specified by pool id
+ * @param {*} db Database
+ * @param {number} poolDbId Server Config Object
+ */
+const poolInfoForId = async (dbApi: DbApi, poolDbId: number) => {
+  if (!poolDbId) { return {} }
+  const poolInfo = await dbApi.singleStakePoolInfo(poolDbId)
+  return poolInfo.length ? poolInfo[0] : {}
+}
+
+/**
+ * Returns delegation, rewards and stake key registration for a given account
+ * @param {*} db Database
+ * @param {*} Server Server Config Object
+ */
+const accountInfo = (dbApi: DbApi, { logger }: ServerConfig) => async (req: any) => {
+  logger.debug('[accountInfo] query started')
+  const { account } = req.params
+  const [delegatedPool] = await dbApi.poolDelegatedTo(wrapHashPrefix(account))
+  // TODO: opt. chaining
+  const poolInfo = await poolInfoForId(dbApi, delegatedPool && delegatedPool.pool_id)
+
+  logger.debug('[accountInfo] query finished')
+  return {
+    delegation: poolInfo,
+  }
 }
 
 export default {
@@ -264,5 +298,10 @@ export default {
     method: 'get',
     path: withPrefix('/stakePools'),
     handler: stakePools,
+  },
+  accountInfo: {
+    method: 'get',
+    path: withPrefix('/account/info/:account'),
+    handler: accountInfo,
   },
 }

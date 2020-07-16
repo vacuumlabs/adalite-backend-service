@@ -60,6 +60,8 @@ declare module 'icarus-backend' {
     getTxsOutputs: (txIds: Array<number>) => Promise<Array<TxOutput>>,
     utxoLegacy: (addresses: Array<string>) => Promise<Array<UtxoLegacyDbResult>>,
     stakePoolsInfo: () => Promise<Array<any>>, // TODO: type after it's clear what we need
+    singleStakePoolInfo: (poolDbId: number) => Promise<Array<any>>, // TODO: -||-
+    poolDelegatedTo: (account: string) => Promise<Array<any>>,
   };
 
   declare type ImporterApi = {
