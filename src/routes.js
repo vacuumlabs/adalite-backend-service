@@ -132,7 +132,6 @@ const txHistoryEntry = (
   time: tx.time,
   tx_state: 'Successful',
   last_update: tx.time,
-  tx_body: unwrapHashPrefix(tx.body),
   tx_ordinal: tx.tx_ordinal,
   inputs: txInputs.map(txInput => ({
     address: txInput.address,

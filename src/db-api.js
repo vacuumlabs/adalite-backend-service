@@ -16,6 +16,9 @@ import type {
   UtxoForAddressesDbResult,
   UsedAddressDbResult,
   UtxoSumDbResult,
+  StakePool,
+  PoolDelegatedToDbResult,
+  StakeAddressIdDbResult,
 } from 'icarus-backend'; // eslint-disable-line
 
 // helper function to avoid destructuring ".rows" in the codebase
@@ -69,23 +72,21 @@ const utxoSumForAddresses = (db: Pool) => async (addresses: Array<string>)
   (db.query(`SELECT SUM(amount) FROM (${utxoQuery}) as utxo_table`, [addresses]): any)
 
 const txHistoryQuery = (limit: number) => `
-  SELECT txs.id as "dbId", txs.hash, txs.block_no, txs.blockHash, txs.block_index as tx_ordinal, txs.time, txs.body::text from (
+  SELECT txs.id as "dbId", txs.hash, txs.block_no, txs.blockHash, txs.block_index as tx_ordinal, txs.time from (
       SELECT                                                                                                              
-        tx.id, tx.hash::text, block.block_no, block.hash::text as blockHash, block.time, tx.block_index, tx_body.body::text                  
+        tx.id, tx.hash::text, block.block_no, block.hash::text as blockHash, block.time, tx.block_index                
         FROM block                                                                                                        
         INNER JOIN tx ON block.id = tx.block                                                                              
-        INNER JOIN tx_out ON tx.id = tx_out.tx_id
-        JOIN  tx_body ON tx.hash = tx_body.hash                                                                  
+        INNER JOIN tx_out ON tx.id = tx_out.tx_id                                                                
         WHERE tx_out.address = ANY($1)                                                                                    
           AND block.time >= $2                                                                                  
     UNION                                                                                                                 
       SELECT DISTINCT                                                                                                     
-        tx.id, tx.hash::text, block.block_no, block.hash::text as blockHash, block.time, tx.block_index, tx_body.body::text              
+        tx.id, tx.hash::text, block.block_no, block.hash::text as blockHash, block.time, tx.block_index            
         FROM block                                                                                                        
         INNER JOIN tx ON block.id = tx.block                                                                              
         INNER JOIN tx_in ON tx.id = tx_in.tx_in_id                                                                        
-        INNER JOIN tx_out ON (tx_in.tx_out_id = tx_out.tx_id) AND (tx_in.tx_out_index = tx_out.index)    
-        JOIN  tx_body ON tx.hash = tx_body.hash                  
+        INNER JOIN tx_out ON (tx_in.tx_out_id = tx_out.tx_id) AND (tx_in.tx_out_index = tx_out.index)             
         WHERE tx_out.address = ANY($1)                                                                                                                                                                       
           AND block.time >= $2                                                                                      
     ORDER BY time ASC                                                                                                     
@@ -245,6 +246,115 @@ const bestBlock = (db: Pool) => async (): Promise<number> => {
   return query.rows.length > 0 ? parseInt(query.rows[0].block_no, 10) : 0
 }
 
+/**
+ * Queries stake_address table for id of a stake_address for later fast lookups
+ * @param {Db Object} db
+ * @param {string} account
+ */
+const stakeAddressId = (db: Pool) => async (account: string)
+: Promise<TypedResultSet<StakeAddressIdDbResult>> =>
+  (db.query({
+    text: 'SELECT id as "accountDbId" from stake_address WHERE hash=$1',
+    values: [account],
+  }): any)
+
+const retiredPoolsIdsQuery = `SELECT update_id FROM pool_retire pr
+  WHERE retiring_epoch < (SELECT no FROM epoch ORDER BY no DESC limit 1)`
+
+/**
+ * Gets information about a specified pool if id of this pool hash is specified,
+ *  otherwise all pools are retrieved
+ * @param {number=} poolHashDbId - database id of a given pool hash
+ */
+const stakePoolsQuery = (poolHashDbId?: number) => `SELECT 
+  sp."poolHash", sp.pledge, sp.margin, sp."fixedCost", sp.url FROM
+    (SELECT 
+      DISTINCT ON (ph.hash) RIGHT(ph.hash::text, -2) as "poolHash", p.pledge, p.margin,
+        p.fixed_cost as "fixedCost", pmd.url, p.id as update_id
+      FROM pool_update AS p
+      LEFT JOIN pool_meta_data AS pmd ON p.meta=pmd.id
+      LEFT JOIN pool_hash AS ph ON p.hash_id=ph.id
+      LEFT JOIN pool_owner AS po ON po.pool_id=ph.id
+      ${poolHashDbId ? `WHERE ph.id=${poolHashDbId}` : ''}
+      ORDER BY ph.hash, p.registered_tx_id DESC
+    ) sp
+  WHERE sp.update_id NOT IN (${retiredPoolsIdsQuery})
+`
+
+/**
+ * Gets all valid pools and their information
+ * @param {Db Object} db
+ */
+const stakePoolsInfo = (db: Pool) => async ()
+: Promise<TypedResultSet<StakePool>> => (
+    db.query(stakePoolsQuery()): any)
+
+/**
+ * Gets information for a single stake pool specified by its hash
+ * @param {Db Object} db
+ * @param {number} poolDbId
+ */
+const singleStakePoolInfo = (db: Pool) => async (poolDbId: number)
+: Promise<TypedResultSet<StakePool>> =>
+  (db.query(stakePoolsQuery(poolDbId)): any)
+
+/**
+ * Gets id of pool that the given account delegates to
+ * @param {Db Object} db
+ * @param {number} accountDbId
+ */
+const poolDelegatedTo = (db: Pool) => async (accountDbId: number)
+: Promise<TypedResultSet<PoolDelegatedToDbResult>> =>
+  (db.query({
+    text: `SELECT
+      p.hash_id AS "poolHashDbId" FROM pool_update AS p
+      LEFT JOIN delegation AS d ON d.update_id=p.id
+      LEFT JOIN tx ON d.tx_id=tx.id      
+      WHERE d.addr_id=$1
+      ORDER BY tx.block DESC
+      LIMIT 1`, // TODO: take deregistration into account when it's implemented
+    values: [accountDbId],
+  }): any)
+
+/**
+ * Gets latest block of registration or deregistration for a given "addr_id"
+ * @param {string} dbTable - "stake_registration" or "stake_deregistration" table
+ */
+const newestStakingKeyBlockForDb = (dbTable: string) => `SELECT
+  tx.block from tx
+  LEFT JOIN ${dbTable} ON tx.id=${dbTable}.tx_id
+  WHERE ${dbTable}.addr_id=$1
+  ORDER BY tx.block DESC
+  LIMIT 1
+`
+
+const hasActiveStakingKey = (db: Pool) => async (accountDbId: number): Promise<boolean> => {
+  const registrationBlockResult = await db.query({
+    text: newestStakingKeyBlockForDb('stake_registration'),
+    values: [accountDbId],
+  })
+  const deregistrationBlockResult = await db.query({
+    text: newestStakingKeyBlockForDb('stake_deregistration'),
+    values: [accountDbId],
+  })
+  const latestRegistrationBlock = registrationBlockResult.rows.length
+    ? parseInt(registrationBlockResult.rows[0].block, 10) : -1
+  const latestDeregistrationBlock = deregistrationBlockResult.rows.length
+    ? parseInt(deregistrationBlockResult.rows[0].block, 10) : -1
+  return latestRegistrationBlock > latestDeregistrationBlock
+}
+
+const rewardsForAccountDbId = (db: Pool) => async (accountDbId: number): Promise<number> => {
+  const rewardResult = await db.query(`
+    SELECT COALESCE(sum(amount), 0) as amount from (
+      SELECT amount FROM reward WHERE addr_id=${accountDbId}
+      UNION
+      SELECT r.amount FROM reserve r WHERE addr_id=${accountDbId}
+      AND NOT EXISTS (SELECT FROM withdrawal w WHERE w.addr_id=r.addr_id and w.amount=r.amount)
+    ) as rewards`)
+  return rewardResult.rows.length > 0 ? parseInt(rewardResult.rows[0].amount, 10) : 0
+}
+
 export default (db: Pool): DbApi => ({
   filterUsedAddresses: extractRows(filterUsedAddresses(db)),
   utxoForAddresses: extractRows(utxoForAddresses(db)),
@@ -260,4 +370,10 @@ export default (db: Pool): DbApi => ({
   getTransactions: extractRows(getTransactions(db)),
   getTxsInputs: extractRows(getTxsInputs(db)),
   getTxsOutputs: extractRows(getTxsOutputs(db)),
+  stakeAddressId: extractRows(stakeAddressId(db)),
+  stakePoolsInfo: extractRows(stakePoolsInfo(db)),
+  singleStakePoolInfo: extractRows(singleStakePoolInfo(db)),
+  poolDelegatedTo: extractRows(poolDelegatedTo(db)),
+  hasActiveStakingKey: hasActiveStakingKey(db),
+  rewardsForAccountDbId: rewardsForAccountDbId(db),
 })

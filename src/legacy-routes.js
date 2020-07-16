@@ -1,6 +1,6 @@
 // @flow
 
-import { isValidAddress } from 'cardano-crypto.js'
+// import { isValidAddress } from 'cardano-crypto.js'
 import moment from 'moment'
 import Big from 'big.js'
 
@@ -12,9 +12,11 @@ import type {
   TxEntry,
   Tx,
   CoinObject,
+  DbApi,
 } from 'icarus-backend'; // eslint-disable-line
 import { wrapHashPrefix, unwrapHashPrefix, groupInputsOutputs } from './helpers'
 
+const isValidAddress = (address) => true
 const withPrefix = route => `/api${route}`
 const invalidAddress = 'Invalid Cardano address!'
 const invalidTx = 'Invalid transaction id!'
@@ -62,7 +64,7 @@ const buildTxList = (
   const txInputMap = groupInputsOutputs(txInputs)
   const txOutputMap = groupInputsOutputs(txOutputs)
   const txList: Array<TxEntry> = transactions
-    .map(tx => initializeTxEntry(tx, txInputMap[tx.dbId], txOutputMap[tx.dbId]))
+    .map(tx => initializeTxEntry(tx, txInputMap[tx.dbId], txOutputMap[tx.dbId] || []))
     .sort((a, b) => b.ctbTimeIssued - a.ctbTimeIssued)
   return txList
 }
@@ -89,7 +91,7 @@ const getAddressSummaryForAddresses = async (
   const addressSet = new Set(addresses)
   const totalInput = sumTxs(txOutputs, addressSet)
   const totalOutput = sumTxs(txInputs, addressSet)
-
+  
   return {
     caTxNum: caTxList.length,
     caBalance: getCoinObject(totalInput.sub(totalOutput)),
@@ -226,6 +228,51 @@ const bulkAddressSummary = (dbApi: any, { logger, apiConfig }: ServerConfig) => 
   return { Right: { caAddresses: addresses, ...addressSummaryResult } }
 }
 
+/**
+ * Gets all valid stake pools and their information
+ * @param {*} db Database
+ * @param {*} Server Server Config Object
+ */
+const stakePools = (dbApi: DbApi, { logger }: ServerConfig) => async () => {
+  logger.debug('[stakePools] query started')
+  const result = await dbApi.stakePoolsInfo()
+  logger.debug('[stakePools] query finished')
+  return result
+}
+
+/**
+ * Helper for getting information for a single pool specified by pool id
+ * @param {*} db Database
+ * @param {number} accountDbId Server Config Object
+ */
+const poolInfoForAccountId = async (dbApi: DbApi, accountDbId: number) => {
+  const [delegatedPool] = await dbApi.poolDelegatedTo(accountDbId)
+  if (!delegatedPool || !delegatedPool.poolHashDbId) { return {} }
+  const poolInfo = await dbApi.singleStakePoolInfo(delegatedPool.poolHashDbId)
+  return poolInfo.length ? poolInfo[0] : {}
+}
+
+/**
+ * Returns delegation, rewards and stake key registration for a given account
+ * @param {*} db Database
+ * @param {*} Server Server Config Object
+ */
+const accountInfo = (dbApi: DbApi, { logger }: ServerConfig) => async (req: any) => {
+  logger.debug('[accountInfo] query started')
+  const { account } = req.params
+  const accountDbIdResult = await dbApi.stakeAddressId(wrapHashPrefix(account))
+  const accountDbId = accountDbIdResult.length > 0 ? accountDbIdResult[0].accountDbId : undefined
+  const delegation = accountDbId ? await poolInfoForAccountId(dbApi, accountDbId) : {}
+  const hasStakingKey = accountDbId ? await dbApi.hasActiveStakingKey(accountDbId) : false
+  const rewards = accountDbId ? await dbApi.rewardsForAccountDbId(accountDbId) : 0
+  logger.debug('[accountInfo] query finished')
+  return {
+    delegation,
+    hasStakingKey,
+    rewards,
+  }
+}
+
 export default {
   addressSummary: {
     method: 'get',
@@ -251,5 +298,15 @@ export default {
     method: 'post',
     path: withPrefix('/bulk/addresses/summary'),
     handler: bulkAddressSummary,
+  },
+  stakePools: {
+    method: 'get',
+    path: withPrefix('/stakePools'),
+    handler: stakePools,
+  },
+  accountInfo: {
+    method: 'get',
+    path: withPrefix('/account/info/:account'),
+    handler: accountInfo,
   },
 }

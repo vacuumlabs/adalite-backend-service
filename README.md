@@ -67,17 +67,6 @@ SLACK_TOKEN=slackToken
 SLACK_CHANNEL=slackChannel
 ```
 
-## Database migrations
-
-[Knex](https://knexjs.org/#Migrations) is used to handle the migrations. The connection settings are taken from `.env`. `yarn migrate` can be used to update database to latest migration.
-
-Examples of migration commands:
-```
-yarn knex migrate:latest
-yarn knex migrate:rollback
-yarn knex migrate:make $name
-```
-
 ## Checks & Tests
 
 ### Flow and Eslint
