@@ -288,7 +288,10 @@ const poolDelegatedTo = (db: Pool) => async (account: string)
     text: `SELECT
       d.update_id as pool_id from delegation as d
       LEFT JOIN stake_address as sa ON sa.id=d.addr_id
-      WHERE sa.hash=$1`,
+      LEFT JOIN tx on d.tx_id=tx.id
+      WHERE sa.hash=$1
+      ORDER BY tx.block DESC
+      LIMIT 1`, // TODO: take deregistration into account when it's implemented
     values: [account],
   }): any)
 
