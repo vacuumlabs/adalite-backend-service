@@ -59,9 +59,9 @@ declare module 'icarus-backend' {
     getTxsInputs: (txIds: Array<number>) => Promise<Array<TxInput>>,
     getTxsOutputs: (txIds: Array<number>) => Promise<Array<TxOutput>>,
     utxoLegacy: (addresses: Array<string>) => Promise<Array<UtxoLegacyDbResult>>,
-    stakePoolsInfo: () => Promise<Array<any>>, // TODO: type after it's clear what we need
-    singleStakePoolInfo: (poolDbId: number) => Promise<Array<any>>, // TODO: -||-
-    poolDelegatedTo: (account: string) => Promise<Array<any>>,
+    stakePoolsInfo: () => Promise<Array<StakePool>>,
+    singleStakePoolInfo: (poolDbId: number) => Promise<Array<StakePool>>,
+    poolDelegatedTo: (account: string) => Promise<Array<PoolDelegatedToDbResult>>,
     hasActiveStakingKey: (accountDbId: number) => Promise<boolean>,
   };
 
@@ -184,5 +184,18 @@ declare module 'icarus-backend' {
     ctbOutputs: Array<TxInputOutputEntry>,
     ctbInputSum: CoinObject,
     ctbOutputSum: CoinObject,
+  }
+
+  declare type StakePool = {
+    poolHash: string,
+    pledge: number,
+    margin: number,
+    fixedCost: number,
+    url: string,
+  }
+
+  declare type PoolDelegatedToDbResult = {
+    poolDbId: number,
+    accountDbId: number,
   }
 }

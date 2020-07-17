@@ -16,6 +16,8 @@ import type {
   UtxoForAddressesDbResult,
   UsedAddressDbResult,
   UtxoSumDbResult,
+  StakePool,
+  PoolDelegatedToDbResult,
 } from 'icarus-backend'; // eslint-disable-line
 
 // helper function to avoid destructuring ".rows" in the codebase
@@ -250,9 +252,9 @@ const bestBlock = (db: Pool) => async (): Promise<number> => {
  * @param {number=} poolDbId - database id of a given pool
  */
 const stakePoolsQuery = (poolDbId?: number) => `
-  SELECT      
-  DISTINCT ON (ph.hash) RIGHT(ph.hash::text, -2) as pool_hash, p.registered_tx_id, p.pledge, p.reward_addr_id,
-    p.margin, p.fixed_cost, pmd.url, RIGHT(po.hash::text, -2) as owner_hash
+  SELECT
+  DISTINCT ON (ph.hash) RIGHT(ph.hash::text, -2) as "poolHash", p.pledge, p.margin,
+    p.fixed_cost as "fixedCost", pmd.url
   FROM pool_update AS p
   LEFT JOIN pool_meta_data AS pmd ON p.meta=pmd.id
   LEFT JOIN pool_hash AS ph ON p.hash_id=ph.id
@@ -266,7 +268,7 @@ const stakePoolsQuery = (poolDbId?: number) => `
  * @param {Db Object} db
  */
 const stakePoolsInfo = (db: Pool) => async ()
-: Promise<TypedResultSet<any>> =>// TODO: type after it's clear what we need
+: Promise<TypedResultSet<StakePool>> =>
   (db.query({
     text: stakePoolsQuery(),
   }): any)
@@ -277,7 +279,7 @@ const stakePoolsInfo = (db: Pool) => async ()
  * @param {number} poolDbId
  */
 const singleStakePoolInfo = (db: Pool) => async (poolDbId: number)
-: Promise<TypedResultSet<any>> =>// TODO: type after it's clear what we need
+: Promise<TypedResultSet<StakePool>> =>
   (db.query({
     text: stakePoolsQuery(poolDbId),
   }): any)
@@ -287,10 +289,10 @@ const singleStakePoolInfo = (db: Pool) => async (poolDbId: number)
  * @param {Db Object} db
  */
 const poolDelegatedTo = (db: Pool) => async (account: string)
-: Promise<TypedResultSet<any>> =>// TODO: type after it's clear what we need
+: Promise<TypedResultSet<PoolDelegatedToDbResult>> =>
   (db.query({
     text: `SELECT
-      d.update_id as pool_id, d.addr_id as "accountDbId" from delegation as d
+      d.update_id as "poolDbId", d.addr_id as "accountDbId" from delegation as d
       LEFT JOIN stake_address as sa ON sa.id=d.addr_id
       LEFT JOIN tx on d.tx_id=tx.id
       WHERE sa.hash=$1

@@ -260,7 +260,7 @@ const accountInfo = (dbApi: DbApi, { logger }: ServerConfig) => async (req: any)
   const { account } = req.params
   const [delegatedPool] = await dbApi.poolDelegatedTo(wrapHashPrefix(account))
   // TODO: opt. chaining
-  const poolInfo = await poolInfoForId(dbApi, delegatedPool && delegatedPool.pool_id)
+  const poolInfo = await poolInfoForId(dbApi, delegatedPool && delegatedPool.poolDbId)
   const hasStakingKey = delegatedPool && delegatedPool.accountDbId
     ? await dbApi.hasActiveStakingKey(delegatedPool.accountDbId)
     : false
