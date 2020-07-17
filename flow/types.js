@@ -62,6 +62,7 @@ declare module 'icarus-backend' {
     stakePoolsInfo: () => Promise<Array<any>>, // TODO: type after it's clear what we need
     singleStakePoolInfo: (poolDbId: number) => Promise<Array<any>>, // TODO: -||-
     poolDelegatedTo: (account: string) => Promise<Array<any>>,
+    hasActiveStakingKey: (accountDbId: number) => Promise<boolean>,
   };
 
   declare type ImporterApi = {

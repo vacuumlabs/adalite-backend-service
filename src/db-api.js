@@ -245,6 +245,10 @@ const bestBlock = (db: Pool) => async (): Promise<number> => {
   return query.rows.length > 0 ? parseInt(query.rows[0].block_no, 10) : 0
 }
 
+/**
+ * Gets information about a specified pool if its id is specified, otherwise all pools are retrieved
+ * @param {number=} poolDbId - database id of a given pool
+ */
 const stakePoolsQuery = (poolDbId?: number) => `
   SELECT      
   DISTINCT ON (ph.hash) RIGHT(ph.hash::text, -2) as pool_hash, p.registered_tx_id, p.pledge, p.reward_addr_id,
@@ -286,7 +290,7 @@ const poolDelegatedTo = (db: Pool) => async (account: string)
 : Promise<TypedResultSet<any>> =>// TODO: type after it's clear what we need
   (db.query({
     text: `SELECT
-      d.update_id as pool_id from delegation as d
+      d.update_id as pool_id, d.addr_id as "accountDbId" from delegation as d
       LEFT JOIN stake_address as sa ON sa.id=d.addr_id
       LEFT JOIN tx on d.tx_id=tx.id
       WHERE sa.hash=$1
@@ -294,6 +298,34 @@ const poolDelegatedTo = (db: Pool) => async (account: string)
       LIMIT 1`, // TODO: take deregistration into account when it's implemented
     values: [account],
   }): any)
+
+/**
+ * Gets latest block of registration or deregistration for a given "addr_id"
+ * @param {string} dbTable - "stake_registration" or "stake_deregistration" table
+ */
+const newestStakingKeyBlockForDb = (dbTable: string) => `SELECT
+  tx.block from tx
+  LEFT JOIN ${dbTable} ON tx.id=${dbTable}.tx_id
+  WHERE ${dbTable}.addr_id=$1
+  ORDER BY tx.block DESC
+  LIMIT 1
+`
+
+const hasActiveStakingKey = (db: Pool) => async (accountDbId: number): Promise<boolean> => {
+  const registrationBlockResult = await db.query({
+    text: newestStakingKeyBlockForDb('stake_registration'),
+    values: [accountDbId],
+  })
+  const deregistrationBlockResult = await db.query({
+    text: newestStakingKeyBlockForDb('stake_deregistration'),
+    values: [accountDbId],
+  })
+  const latestRegistrationBlock = registrationBlockResult.rows.length
+    ? parseInt(registrationBlockResult.rows[0].block, 10) : -1
+  const latestDeregistrationBlock = deregistrationBlockResult.rows.length
+    ? parseInt(deregistrationBlockResult.rows[0].block, 10) : -1
+  return latestRegistrationBlock > latestDeregistrationBlock
+}
 
 export default (db: Pool): DbApi => ({
   filterUsedAddresses: extractRows(filterUsedAddresses(db)),
@@ -313,4 +345,5 @@ export default (db: Pool): DbApi => ({
   stakePoolsInfo: extractRows(stakePoolsInfo(db)),
   singleStakePoolInfo: extractRows(singleStakePoolInfo(db)),
   poolDelegatedTo: extractRows(poolDelegatedTo(db)),
+  hasActiveStakingKey: hasActiveStakingKey(db),
 })
