@@ -195,7 +195,7 @@ declare module 'icarus-backend' {
   }
 
   declare type PoolDelegatedToDbResult = {
-    poolDbId: number,
+    poolHashDbId: number,
     accountDbId: number,
   }
 }

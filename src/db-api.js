@@ -248,10 +248,11 @@ const bestBlock = (db: Pool) => async (): Promise<number> => {
 }
 
 /**
- * Gets information about a specified pool if its id is specified, otherwise all pools are retrieved
- * @param {number=} poolDbId - database id of a given pool
+ * Gets information about a specified pool if id of this pool hash is specified,
+ *  otherwise all pools are retrieved
+ * @param {number=} poolHashDbId - database id of a given pool hash
  */
-const stakePoolsQuery = (poolDbId?: number) => `
+const stakePoolsQuery = (poolHashDbId?: number) => `
   SELECT
   DISTINCT ON (ph.hash) RIGHT(ph.hash::text, -2) as "poolHash", p.pledge, p.margin,
     p.fixed_cost as "fixedCost", pmd.url
@@ -259,7 +260,7 @@ const stakePoolsQuery = (poolDbId?: number) => `
   LEFT JOIN pool_meta_data AS pmd ON p.meta=pmd.id
   LEFT JOIN pool_hash AS ph ON p.hash_id=ph.id
   LEFT JOIN pool_owner AS po ON po.pool_id=ph.id
-  ${poolDbId ? `WHERE p.id=${poolDbId}` : ''}
+  ${poolHashDbId ? `WHERE ph.id=${poolHashDbId}` : ''}
   ORDER BY ph.hash, p.registered_tx_id DESC
 ` // TODO:also not retired?
 
@@ -292,9 +293,10 @@ const poolDelegatedTo = (db: Pool) => async (account: string)
 : Promise<TypedResultSet<PoolDelegatedToDbResult>> =>
   (db.query({
     text: `SELECT
-      d.update_id as "poolDbId", d.addr_id as "accountDbId" from delegation as d
-      LEFT JOIN stake_address as sa ON sa.id=d.addr_id
-      LEFT JOIN tx on d.tx_id=tx.id
+      p.hash_id AS "poolHashDbId", d.addr_id AS "accountDbId" FROM delegation AS d
+      LEFT JOIN stake_address AS sa ON sa.id=d.addr_id
+      LEFT JOIN tx ON d.tx_id=tx.id
+      LEFT JOIN pool_update AS p ON d.update_id=p.id
       WHERE sa.hash=$1
       ORDER BY tx.block DESC
       LIMIT 1`, // TODO: take deregistration into account when it's implemented
