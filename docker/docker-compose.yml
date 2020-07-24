@@ -46,7 +46,7 @@ services:
 
   cardano-node:
     container_name: ${COMPOSE_PROJECT_NAME}-cardano-node
-    image: inputoutput/cardano-node:master
+    image: refi93/cardano-node:byron
     environment:
       - NETWORK=${NETWORK}
     volumes:
@@ -77,7 +77,7 @@ services:
 
   cardano-submit-api:
     container_name: ${COMPOSE_PROJECT_NAME}-cardano-submit-api
-    image: inputoutput/cardano-submit-api:master
+    image: refi93/cardano-submit-api:byron
     environment:
       - NETWORK=${NETWORK}
     depends_on:
