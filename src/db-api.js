@@ -18,6 +18,7 @@ import type {
   UtxoSumDbResult,
   StakePool,
   PoolDelegatedToDbResult,
+  StakeAddressIdDbResult,
 } from 'icarus-backend'; // eslint-disable-line
 
 // helper function to avoid destructuring ".rows" in the codebase
@@ -248,6 +249,18 @@ const bestBlock = (db: Pool) => async (): Promise<number> => {
 }
 
 /**
+ * Queries stake_address table for id of a stake_address for later fast lookups
+ * @param {Db Object} db
+ * @param {string} account
+ */
+const stakeAddressId = (db: Pool) => async (account: string)
+: Promise<TypedResultSet<StakeAddressIdDbResult>> =>
+  (db.query({
+    text: 'SELECT id as "accountDbId" from stake_address WHERE hash=$1',
+    values: [account],
+  }): any)
+
+/**
  * Gets information about a specified pool if id of this pool hash is specified,
  *  otherwise all pools are retrieved
  * @param {number=} poolHashDbId - database id of a given pool hash
@@ -288,19 +301,19 @@ const singleStakePoolInfo = (db: Pool) => async (poolDbId: number)
 /**
  * Gets id of pool that the given account delegates to
  * @param {Db Object} db
+ * @param {number} accountDbId
  */
-const poolDelegatedTo = (db: Pool) => async (account: string)
+const poolDelegatedTo = (db: Pool) => async (accountDbId: number)
 : Promise<TypedResultSet<PoolDelegatedToDbResult>> =>
   (db.query({
     text: `SELECT
-      p.hash_id AS "poolHashDbId", d.addr_id AS "accountDbId" FROM delegation AS d
-      LEFT JOIN stake_address AS sa ON sa.id=d.addr_id
-      LEFT JOIN tx ON d.tx_id=tx.id
-      LEFT JOIN pool_update AS p ON d.update_id=p.id
-      WHERE sa.hash=$1
+      p.hash_id AS "poolHashDbId" FROM pool_update AS p
+      LEFT JOIN delegation AS d ON d.update_id=p.id
+      LEFT JOIN tx ON d.tx_id=tx.id      
+      WHERE d.addr_id=$1
       ORDER BY tx.block DESC
       LIMIT 1`, // TODO: take deregistration into account when it's implemented
-    values: [account],
+    values: [accountDbId],
   }): any)
 
 /**
@@ -331,6 +344,11 @@ const hasActiveStakingKey = (db: Pool) => async (accountDbId: number): Promise<b
   return latestRegistrationBlock > latestDeregistrationBlock
 }
 
+const rewardsForAccountDbId = (db: Pool) => async (accountDbId: number): Promise<number> => {
+  const rewardResult = await db.query(`SELECT amount FROM reward WHERE addr_id=${accountDbId}`)
+  return rewardResult.rows.length > 0 ? parseInt(rewardResult.rows[0].amount, 10) : 0
+}
+
 export default (db: Pool): DbApi => ({
   filterUsedAddresses: extractRows(filterUsedAddresses(db)),
   utxoForAddresses: extractRows(utxoForAddresses(db)),
@@ -346,8 +364,10 @@ export default (db: Pool): DbApi => ({
   getTransactions: extractRows(getTransactions(db)),
   getTxsInputs: extractRows(getTxsInputs(db)),
   getTxsOutputs: extractRows(getTxsOutputs(db)),
+  stakeAddressId: extractRows(stakeAddressId(db)),
   stakePoolsInfo: extractRows(stakePoolsInfo(db)),
   singleStakePoolInfo: extractRows(singleStakePoolInfo(db)),
   poolDelegatedTo: extractRows(poolDelegatedTo(db)),
   hasActiveStakingKey: hasActiveStakingKey(db),
+  rewardsForAccountDbId: rewardsForAccountDbId(db),
 })

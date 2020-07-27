@@ -242,11 +242,12 @@ const stakePools = (dbApi: DbApi, { logger }: ServerConfig) => async () => {
 /**
  * Helper for getting information for a single pool specified by pool id
  * @param {*} db Database
- * @param {number} poolHashDbId Server Config Object
+ * @param {number} accountDbId Server Config Object
  */
-const poolInfoForId = async (dbApi: DbApi, poolHashDbId: number) => {
-  if (!poolHashDbId) { return {} }
-  const poolInfo = await dbApi.singleStakePoolInfo(poolHashDbId)
+const poolInfoForAccountId = async (dbApi: DbApi, accountDbId: number) => {
+  const [delegatedPool] = await dbApi.poolDelegatedTo(accountDbId)
+  if (!delegatedPool || !delegatedPool.poolHashDbId) { return {} }
+  const poolInfo = await dbApi.singleStakePoolInfo(delegatedPool.poolHashDbId)
   return poolInfo.length ? poolInfo[0] : {}
 }
 
@@ -258,17 +259,16 @@ const poolInfoForId = async (dbApi: DbApi, poolHashDbId: number) => {
 const accountInfo = (dbApi: DbApi, { logger }: ServerConfig) => async (req: any) => {
   logger.debug('[accountInfo] query started')
   const { account } = req.params
-  const [delegatedPool] = await dbApi.poolDelegatedTo(wrapHashPrefix(account))
-  // TODO: opt. chaining
-  const poolInfo = await poolInfoForId(dbApi, delegatedPool && delegatedPool.poolHashDbId)
-  const hasStakingKey = delegatedPool && delegatedPool.accountDbId
-    ? await dbApi.hasActiveStakingKey(delegatedPool.accountDbId)
-    : false
-
+  const accountDbIdResult = await dbApi.stakeAddressId(wrapHashPrefix(account))
+  const accountDbId = accountDbIdResult.length > 0 ? accountDbIdResult[0].accountDbId : undefined
+  const delegation = accountDbId ? await poolInfoForAccountId(dbApi, accountDbId) : {}
+  const hasStakingKey = accountDbId ? await dbApi.hasActiveStakingKey(accountDbId) : false
+  const rewards = accountDbId ? await dbApi.rewardsForAccountDbId(accountDbId) : 0
   logger.debug('[accountInfo] query finished')
   return {
-    delegation: poolInfo,
+    delegation,
     hasStakingKey,
+    rewards,
   }
 }
 

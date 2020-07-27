@@ -59,10 +59,12 @@ declare module 'icarus-backend' {
     getTxsInputs: (txIds: Array<number>) => Promise<Array<TxInput>>,
     getTxsOutputs: (txIds: Array<number>) => Promise<Array<TxOutput>>,
     utxoLegacy: (addresses: Array<string>) => Promise<Array<UtxoLegacyDbResult>>,
+    stakeAddressId: (account: string) => Promise<Array<StakeAddressIdDbResult>>,
     stakePoolsInfo: () => Promise<Array<StakePool>>,
     singleStakePoolInfo: (poolDbId: number) => Promise<Array<StakePool>>,
-    poolDelegatedTo: (account: string) => Promise<Array<PoolDelegatedToDbResult>>,
+    poolDelegatedTo: (accountDbId: number) => Promise<Array<PoolDelegatedToDbResult>>,
     hasActiveStakingKey: (accountDbId: number) => Promise<boolean>,
+    rewardsForAccountDbId: (accountDbId: number) => Promise<number>,
   };
 
   declare type ImporterApi = {
@@ -196,6 +198,9 @@ declare module 'icarus-backend' {
 
   declare type PoolDelegatedToDbResult = {
     poolHashDbId: number,
+  }
+
+  declare type StakeAddressIdDbResult = {
     accountDbId: number,
   }
 }
