@@ -260,32 +260,36 @@ const stakeAddressId = (db: Pool) => async (account: string)
     values: [account],
   }): any)
 
+const retiredPoolsIdsQuery = `SELECT update_id FROM pool_retire pr
+  WHERE retiring_epoch < (SELECT no FROM epoch ORDER BY no DESC limit 1)`
+
 /**
  * Gets information about a specified pool if id of this pool hash is specified,
  *  otherwise all pools are retrieved
  * @param {number=} poolHashDbId - database id of a given pool hash
  */
-const stakePoolsQuery = (poolHashDbId?: number) => `
-  SELECT
-  DISTINCT ON (ph.hash) RIGHT(ph.hash::text, -2) as "poolHash", p.pledge, p.margin,
-    p.fixed_cost as "fixedCost", pmd.url
-  FROM pool_update AS p
-  LEFT JOIN pool_meta_data AS pmd ON p.meta=pmd.id
-  LEFT JOIN pool_hash AS ph ON p.hash_id=ph.id
-  LEFT JOIN pool_owner AS po ON po.pool_id=ph.id
-  ${poolHashDbId ? `WHERE ph.id=${poolHashDbId}` : ''}
-  ORDER BY ph.hash, p.registered_tx_id DESC
-` // TODO:also not retired?
+const stakePoolsQuery = (poolHashDbId?: number) => `SELECT 
+  sp."poolHash", sp.pledge, sp.margin, sp."fixedCost", sp.url FROM
+    (SELECT 
+      DISTINCT ON (ph.hash) RIGHT(ph.hash::text, -2) as "poolHash", p.pledge, p.margin,
+        p.fixed_cost as "fixedCost", pmd.url, p.id as update_id
+      FROM pool_update AS p
+      LEFT JOIN pool_meta_data AS pmd ON p.meta=pmd.id
+      LEFT JOIN pool_hash AS ph ON p.hash_id=ph.id
+      LEFT JOIN pool_owner AS po ON po.pool_id=ph.id
+      ${poolHashDbId ? `WHERE ph.id=${poolHashDbId}` : ''}
+      ORDER BY ph.hash, p.registered_tx_id DESC
+    ) sp
+  WHERE sp.update_id NOT IN (${retiredPoolsIdsQuery})
+`
 
 /**
  * Gets all valid pools and their information
  * @param {Db Object} db
  */
 const stakePoolsInfo = (db: Pool) => async ()
-: Promise<TypedResultSet<StakePool>> =>
-  (db.query({
-    text: stakePoolsQuery(),
-  }): any)
+: Promise<TypedResultSet<StakePool>> => (
+    db.query(stakePoolsQuery()): any)
 
 /**
  * Gets information for a single stake pool specified by its hash
@@ -294,9 +298,7 @@ const stakePoolsInfo = (db: Pool) => async ()
  */
 const singleStakePoolInfo = (db: Pool) => async (poolDbId: number)
 : Promise<TypedResultSet<StakePool>> =>
-  (db.query({
-    text: stakePoolsQuery(poolDbId),
-  }): any)
+  (db.query(stakePoolsQuery(poolDbId)): any)
 
 /**
  * Gets id of pool that the given account delegates to
