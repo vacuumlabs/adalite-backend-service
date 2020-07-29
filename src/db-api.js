@@ -72,7 +72,7 @@ const utxoSumForAddresses = (db: Pool) => async (addresses: Array<string>)
   (db.query(`SELECT SUM(amount) FROM (${utxoQuery}) as utxo_table`, [addresses]): any)
 
 const txHistoryQuery = (limit: number) => `
-  SELECT txs.id as "dbId", txs.hash, txs.block_no, txs.blockHash, txs.block_index as tx_ordinal, txs.time, txs.body::text from (
+  SELECT txs.id as "dbId", txs.hash, txs.block_no, txs.blockHash, txs.block_index as tx_ordinal, txs.time from (
       SELECT                                                                                                              
         tx.id, tx.hash::text, block.block_no, block.hash::text as blockHash, block.time, tx.block_index                
         FROM block                                                                                                        
