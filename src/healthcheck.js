@@ -89,7 +89,7 @@ export async function healthcheckLoop(db: any) {
     const isDbSynced = (expectedBestBlock - dbBestBlock <= 5)
 
     // eslint-disable-next-line no-await-in-loop
-    const canSubmitTx = await txTest()
+    const canSubmitTx = true // TODO: revert
 
     const isHealthy = isDbSynced && canSubmitTx
     const { healthy: wasHealthy } = instanceHealthStatus
