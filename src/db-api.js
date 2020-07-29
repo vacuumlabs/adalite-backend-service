@@ -74,21 +74,19 @@ const utxoSumForAddresses = (db: Pool) => async (addresses: Array<string>)
 const txHistoryQuery = (limit: number) => `
   SELECT txs.id as "dbId", txs.hash, txs.block_no, txs.blockHash, txs.block_index as tx_ordinal, txs.time, txs.body::text from (
       SELECT                                                                                                              
-        tx.id, tx.hash::text, block.block_no, block.hash::text as blockHash, block.time, tx.block_index, tx_body.body::text                  
+        tx.id, tx.hash::text, block.block_no, block.hash::text as blockHash, block.time, tx.block_index                
         FROM block                                                                                                        
         INNER JOIN tx ON block.id = tx.block                                                                              
-        INNER JOIN tx_out ON tx.id = tx_out.tx_id
-        JOIN  tx_body ON tx.hash = tx_body.hash                                                                  
+        INNER JOIN tx_out ON tx.id = tx_out.tx_id                                                                
         WHERE tx_out.address = ANY($1)                                                                                    
           AND block.time >= $2                                                                                  
     UNION                                                                                                                 
       SELECT DISTINCT                                                                                                     
-        tx.id, tx.hash::text, block.block_no, block.hash::text as blockHash, block.time, tx.block_index, tx_body.body::text              
+        tx.id, tx.hash::text, block.block_no, block.hash::text as blockHash, block.time, tx.block_index            
         FROM block                                                                                                        
         INNER JOIN tx ON block.id = tx.block                                                                              
         INNER JOIN tx_in ON tx.id = tx_in.tx_in_id                                                                        
-        INNER JOIN tx_out ON (tx_in.tx_out_id = tx_out.tx_id) AND (tx_in.tx_out_index = tx_out.index)    
-        JOIN  tx_body ON tx.hash = tx_body.hash                  
+        INNER JOIN tx_out ON (tx_in.tx_out_id = tx_out.tx_id) AND (tx_in.tx_out_index = tx_out.index)             
         WHERE tx_out.address = ANY($1)                                                                                                                                                                       
           AND block.time >= $2                                                                                      
     ORDER BY time ASC                                                                                                     

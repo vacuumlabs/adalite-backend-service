@@ -124,7 +124,6 @@ declare module 'icarus-backend' {
     time: Date,
     tx_state: string,
     last_update: Date,
-    tx_body: string,
     tx_ordinal: number,
     inputs: Array<TxHistoryInputEntry>,
     best_block_num: string,
