@@ -1,6 +1,6 @@
 // @flow
 
-import { isValidAddress } from 'cardano-crypto.js'
+// import { isValidAddress } from 'cardano-crypto.js'
 import moment from 'moment'
 import Big from 'big.js'
 
@@ -16,6 +16,7 @@ import type {
 } from 'icarus-backend'; // eslint-disable-line
 import { wrapHashPrefix, unwrapHashPrefix, groupInputsOutputs } from './helpers'
 
+const isValidAddress = (address) => true
 const withPrefix = route => `/api${route}`
 const invalidAddress = 'Invalid Cardano address!'
 const invalidTx = 'Invalid transaction id!'
