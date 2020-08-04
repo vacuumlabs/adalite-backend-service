@@ -346,10 +346,11 @@ const hasActiveStakingKey = (db: Pool) => async (accountDbId: number): Promise<b
 
 const rewardsForAccountDbId = (db: Pool) => async (accountDbId: number): Promise<number> => {
   const rewardResult = await db.query(`
-    SELECT sum(amount) as amount from (
+    SELECT COALESCE(sum(amount), 0) as amount from (
       SELECT amount FROM reward WHERE addr_id=${accountDbId}
       UNION
-      SELECT amount FROM reserve WHERE addr_id=${accountDbId}
+      SELECT r.amount FROM reserve r WHERE addr_id=${accountDbId}
+      AND NOT EXISTS (SELECT FROM withdrawal w WHERE w.addr_id=r.addr_id and w.amount=r.amount)
     ) as rewards`)
   return rewardResult.rows.length > 0 ? parseInt(rewardResult.rows[0].amount, 10) : 0
 }
