@@ -64,7 +64,7 @@ const buildTxList = (
   const txInputMap = groupInputsOutputs(txInputs)
   const txOutputMap = groupInputsOutputs(txOutputs)
   const txList: Array<TxEntry> = transactions
-    .map(tx => initializeTxEntry(tx, txInputMap[tx.dbId], txOutputMap[tx.dbId]))
+    .map(tx => initializeTxEntry(tx, txInputMap[tx.dbId], txOutputMap[tx.dbId] || []))
     .sort((a, b) => b.ctbTimeIssued - a.ctbTimeIssued)
   return txList
 }
@@ -91,7 +91,7 @@ const getAddressSummaryForAddresses = async (
   const addressSet = new Set(addresses)
   const totalInput = sumTxs(txOutputs, addressSet)
   const totalOutput = sumTxs(txInputs, addressSet)
-
+  
   return {
     caTxNum: caTxList.length,
     caBalance: getCoinObject(totalInput.sub(totalOutput)),
