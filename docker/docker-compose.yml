@@ -4,16 +4,19 @@ services:
   adalite-backend:
     container_name: ${COMPOSE_PROJECT_NAME}-adalite-backend
     build: ..
-    depends_on:
-      - postgres
-      - cardano-node
-      - cardano-db-sync
-      - cardano-submit-api
     ports:
       - ${ADALITE_BACKEND_HOST_PORT}:8080
-    command: ["./wait-for-it.sh", "cardano-submit-api:8101", "-t", "3600", "--", "/bin/sh", "-c", "yarn start >> /var/log/app/server.log 2>&1"]
+    command:
+      - /bin/sh 
+      - -c
+      - |
+        cp -u /docker-dir/node-config/* /configs/
+        ./wait-for-it.sh cardano-submit-api:8090 -t 3600 -- /bin/sh -c "yarn start >> /var/log/app/server.log 2>&1"
     volumes:
       - ${DATA_PATH}/adalite-backend:/var/log/app
+      - ${DATA_PATH}/shared_volume:/var/shared_volume
+      - ./:/docker-dir
+      - ${DATA_PATH}/configs:/configs
     environment:
       name: ${COMPOSE_PROJECT_NAME}-adalite-backend
       NODE_ENV: production
@@ -24,7 +27,7 @@ services:
       DB_PASSWORD: ${POSTGRES_PASSWORD}
       DB_USER: cexplorer
       CORS_ENABLED_FOR: ${CORS_ENABLED_FOR}
-      SUBMIT_API_URL: http://cardano-submit-api:8101
+      SUBMIT_API_URL: http://cardano-submit-api:8090
       SLACK_TOKEN: ${SLACK_TOKEN}
       SLACK_CHANNEL: ${SLACK_CHANNEL}
     restart: unless-stopped
@@ -47,11 +50,21 @@ services:
   cardano-node:
     container_name: ${COMPOSE_PROJECT_NAME}-cardano-node
     image: inputoutput/cardano-node:1.18.0
-    environment:
-      - NETWORK=${NETWORK}
+    depends_on:
+      - adalite-backend
+    ports:
+      - ${CARDANO_NODE_PORT}:${CARDANO_NODE_PORT}
     volumes:
       - ${DATA_PATH}/node-db:/data/db
       - ${DATA_PATH}/node-ipc:/ipc
+      - ${DATA_PATH}/configs:/configs
+    command: [
+      "run",
+      "--port", "${CARDANO_NODE_PORT}",
+      "--config", "/configs/mainnet-config.json",
+      "--database-path", "/data/db",
+      "--topology", "/configs/mainnet-topology.json",
+      "--socket-path", "/ipc/node.socket"]
     restart: unless-stopped
 
   cardano-db-sync:
@@ -85,10 +98,14 @@ services:
     volumes:
       - ${DATA_PATH}/node-ipc:/node-ipc
     ports:
-      - ${ADALITE_SUBMIT_API_HOST_PORT}:8101
-    restart: unless-stopped
+      - ${ADALITE_SUBMIT_API_HOST_PORT}:8090
+    entrypoint: "/nix/store/7dn6h4ix2y1jc2gg5219mrwgny5fjkjy-cardano-submit-api-exe-cardano-submit-api-2.1.1/bin/cardano-submit-api"
+    command: ["--socket-path", "/node-ipc/node.socket", "--mainnet", "--port", "8090", "--listen-address", "*", "--config", "/nix/store/fhyvl8jxymk2nrivyv77y1sp432vgz44-submit-api.json"]
+    restart: on-failure
 
 volumes:
   postgres:
   node-db:
   node-ipc:
+  configs:
+  docker-dir:

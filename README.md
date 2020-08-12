@@ -31,7 +31,8 @@ They are loaded using [config](https://www.npmjs.com/package/config) package.
 To start cardano-rest services:
 
 1. Create a `~/docker/.env` and set its variables showed in `~/docker/.example.env`
-2. Execute `COMPOSE_PROJECT_NAME=<custom_prefix_to_container_names> docker-compose up`
+2. Create a copy of `~/docker/mainnet-topology.json.example` and name it `mainnet-topology.json`. By editing `mainnet-topology.json`, you can add custom relay nodes to your topology.
+3. Execute `COMPOSE_PROJECT_NAME=<custom_prefix_to_container_names> docker-compose up`
 
 Note that this starts adalite-backend-service as well, so you can run `docker container stop <adalite-backend-service-container-id>` to stop the backend service running in docker and follow the next steps to start it in console environment.
 
@@ -55,7 +56,8 @@ Docker-compose can be used to run postgres, Cardano rest components and the back
 In order to start a production instance, you need to:
 
 1. Create a config based on `docker/env.example`, choose an instance name and name it `docker/.env.<instance_name>`
-2. Run the interactive script `./manage_containers.sh <instance_name> <action>` from within the `docker` folder. Available actions are `start` - rebuilds and starts the instance, `stop` stops the instance
+2. Create a copy of `~/docker/mainnet-topology.json.example` and name it `mainnet-topology.json`. By editing `mainnet-topology.json`, you can add custom relay nodes to your topology.
+3. Run the interactive script `./manage_containers.sh <instance_name> <action>` from within the `docker` folder. Available actions are `start` - rebuilds and starts the instance, `stop` stops the instance
 
 If you are running the instance for the first time on Ubuntu, you may run into file permission problems, since the volumes will probably be owned by root. To fix this, cd into the instance persistent storage folder (`$DATA_PATH` environment variable) and run `sudo chown -R 999:999 .` and restart the containers.
 
