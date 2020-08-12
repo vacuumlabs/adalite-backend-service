@@ -16,7 +16,7 @@ import type {
 } from 'icarus-backend'; // eslint-disable-line
 import { wrapHashPrefix, unwrapHashPrefix, groupInputsOutputs } from './helpers'
 
-const isValidAddress = (address) => true
+const isValidAddress = (address) => true // eslint-disable-line no-unused-vars
 const withPrefix = route => `/api${route}`
 const invalidAddress = 'Invalid Cardano address!'
 const invalidTx = 'Invalid transaction id!'
@@ -91,7 +91,7 @@ const getAddressSummaryForAddresses = async (
   const addressSet = new Set(addresses)
   const totalInput = sumTxs(txOutputs, addressSet)
   const totalOutput = sumTxs(txInputs, addressSet)
-  
+
   return {
     caTxNum: caTxList.length,
     caBalance: getCoinObject(totalInput.sub(totalOutput)),

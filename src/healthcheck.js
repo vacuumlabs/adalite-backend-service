@@ -40,7 +40,7 @@ async function fetchExpectedBestBlock(): Promise<number> {
     } = (await axios.post(
       'https://explorer.cardano-mainnet.iohk.io/graphql',
       {
-        query: 'query cardanoDynamic {\n  cardano {\n    tip {\n      number\n      slotInEpoch\n      forgedAt\n      protocolVersion\n    }\n    currentEpoch {\n      number\n    }\n  }\n  genesis {\n    byron {\n      protocolConsts {\n        k\n      }\n    }\n    shelley {\n      epochLength\n    }\n  }\n}\n',
+        query: 'query cardanoDynamic {\n  cardano {\n    tip {\n      number\n      slotInEpoch\n      forgedAt\n      protocolVersion\n    }\n    currentEpoch {\n      number\n    }\n  }\n}\n',
         variables: {},
       },
     ))
@@ -57,7 +57,7 @@ async function txTest(): Promise<boolean> {
   let response
   try {
     // eslint-disable-next-line max-len
-    const txBody = '82839f8200d818582482582034b30ffcc37cb23320d01286e444711ceabc74e96c9fe2387f5c3f313942b32900ff9f8282d818584283581c8c0acb0542d176ddbb02678462081194e40204fb622960d188388b64a101581e581c6aedca971f6e65187d53b8315b90dfdb80ac4d6bc72c6bf0b5bad01e001a3c747b481a0007a1208282d818584283581ceb2e580be8db93a736bdd8e9fe0d5f6e8ca50f456bf11834749f98a4a101581e581c6aedca971f6e65187d53bc318a1979025a753c53a2d781e915cc5858001aaf177b461a000503daffa0818200d81858858258409b39227a5c47d594e14b39304af5100a7de7f348d0548b7dc9df49615b9a2de50e6ed2a5ebe9b917cea198cb4c2db24d3829ab4cd7b0345df8aa420d5d7acc6f584004d4d7db6eb5b0f352d3f5ad036ce73968155a539f7f60f85a1d9b264d1cc2bc9e7eef7262fa45b579dd1f30b8d7faff9e362a77a4f51c66074b75e47e15bf06'
+    const txBody = '83a40081825820dde38f7401d3d85371d9efa944b78cee79e44635f9b2c108b512320d75fae40a00018182583901f3db2225703e4cfbe2227772bdf057f9829449f18ac81e250ceb01ca0a84430507e150f0a06109dc3a7b1956b7a0586ae9078a55ef0e0b031a000fc50c021a0002ac09031a00989680a100818258209c253c89bbe32d0b11c2abfa464e75627af25beb90c15adbd9f6b62160dfa838584002bfd17db30a1cdfac05c16b56d03f3594628dfc9e614debbfa50435d4af6af1717bc3f90b8b305e3ca23dcbf333d2863277f9196bd1536b7d1b74509c057702f6'
     response = await importer.sendTx(Buffer.from(txBody, 'hex'))
   } catch (err) {
     if (err.response && err.response.status === 400) {
@@ -86,10 +86,11 @@ export async function healthcheckLoop(db: any) {
     const expectedBestBlock = await fetchExpectedBestBlock() // eslint-disable-line
     const currentTime = Math.floor((new Date().getTime()) / 1000)
 
+    // difference is not abs() to preserve truthy value if explorer is down
     const isDbSynced = (expectedBestBlock - dbBestBlock <= 5)
 
     // eslint-disable-next-line no-await-in-loop
-    const canSubmitTx = true // TODO: revert
+    const canSubmitTx = await txTest()
 
     const isHealthy = isDbSynced && canSubmitTx
     const { healthy: wasHealthy } = instanceHealthStatus
@@ -99,8 +100,9 @@ export async function healthcheckLoop(db: any) {
       unhealthyFrom = isHealthy ? null : currentTime
 
       const message = isHealthy ? 'Database is updating again.' : 'Database did not update!'
+      const explorerMessage = expectedBestBlock === 0 ? ' Cardano explorer down!' : ''
       logger.info(message)
-      rtm.sendMessage(`${process.env.name || 'backend-service'}: ${message}`, channelId)
+      rtm.sendMessage(`${process.env.name || 'backend-service'}: ${message}${explorerMessage}`, channelId)
         .then(() => {
           logger.debug('Message was sent without problems.')
         })

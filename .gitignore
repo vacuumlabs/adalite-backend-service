@@ -64,3 +64,6 @@ build-test
 
 # Claudia Production config file
 claudia-prod.json
+
+# Node topology file
+mainnet-topology.json
