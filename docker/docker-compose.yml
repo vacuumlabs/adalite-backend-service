@@ -49,7 +49,7 @@ services:
 
   cardano-node:
     container_name: ${COMPOSE_PROJECT_NAME}-cardano-node
-    image: inputoutput/cardano-node:1.18.0
+    image: inputoutput/cardano-node:1.18.1
     depends_on:
       - adalite-backend
     ports:
