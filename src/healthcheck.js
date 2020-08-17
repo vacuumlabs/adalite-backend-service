@@ -100,8 +100,9 @@ export async function healthcheckLoop(db: any) {
       unhealthyFrom = isHealthy ? null : currentTime
 
       const message = isHealthy ? 'Database is updating again.' : 'Database did not update!'
+      const explorerMessage = expectedBestBlock === 0 ? ' Cardano explorer down!' : ''
       logger.info(message)
-      rtm.sendMessage(`${process.env.name || 'backend-service'}: ${message}`, channelId)
+      rtm.sendMessage(`${process.env.name || 'backend-service'}: ${message}${explorerMessage}`, channelId)
         .then(() => {
           logger.debug('Message was sent without problems.')
         })
