@@ -40,7 +40,7 @@ async function fetchExpectedBestBlock(): Promise<number> {
     } = (await axios.post(
       'https://explorer.cardano-mainnet.iohk.io/graphql',
       {
-        query: 'query cardanoDynamic {\n  cardano {\n    tip {\n      number\n      slotInEpoch\n      forgedAt\n      protocolVersion\n    }\n    currentEpoch {\n      number\n    }\n  }\n  genesis {\n    byron {\n      protocolConsts {\n        k\n      }\n    }\n    shelley {\n      epochLength\n    }\n  }\n}\n',
+        query: 'query cardanoDynamic {\n  cardano {\n    tip {\n      number\n      slotInEpoch\n      forgedAt\n      protocolVersion\n    }\n    currentEpoch {\n      number\n    }\n  }\n}\n',
         variables: {},
       },
     ))
@@ -86,6 +86,7 @@ export async function healthcheckLoop(db: any) {
     const expectedBestBlock = await fetchExpectedBestBlock() // eslint-disable-line
     const currentTime = Math.floor((new Date().getTime()) / 1000)
 
+    // difference is not abs() to preserve truthy value if explorer is down
     const isDbSynced = (expectedBestBlock - dbBestBlock <= 5)
 
     // eslint-disable-next-line no-await-in-loop
