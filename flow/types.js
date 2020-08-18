@@ -54,6 +54,7 @@ declare module 'icarus-backend' {
       dateFrom: Date,
     ) => Promise<Array<TransactionsHistoryDbResult>>,
     bestBlock: () => Promise<number>,
+    bestSlot: () => Promise<number>,
     getSingleTxInputs: (txId: number) => Promise<Array<SingleTxInputDbResult>>,
     getTransactions: (addresses: Array<string>) => Promise<Array<Tx>>,
     getTxsInputs: (txIds: Array<number>) => Promise<Array<TxInput>>,

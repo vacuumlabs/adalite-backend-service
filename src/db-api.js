@@ -246,6 +246,11 @@ const bestBlock = (db: Pool) => async (): Promise<number> => {
   return query.rows.length > 0 ? parseInt(query.rows[0].block_no, 10) : 0
 }
 
+const bestSlot = (db: Pool) => async (): Promise<number> => {
+  const query = await db.query('SELECT slot_no FROM block WHERE slot_no IS NOT NULL ORDER BY slot_no DESC LIMIT 1')
+  return query.rows.length > 0 ? parseInt(query.rows[0].slot_no, 10) : 0
+}
+
 /**
  * Queries stake_address table for id of a stake_address for later fast lookups
  * @param {Db Object} db
@@ -361,6 +366,7 @@ export default (db: Pool): DbApi => ({
   utxoSumForAddresses: extractRows(utxoSumForAddresses(db)),
   transactionsHistoryForAddresses: extractRows(transactionsHistoryForAddresses(db)),
   bestBlock: bestBlock(db),
+  bestSlot: bestSlot(db),
   // legacy cardano-db-sync schema
   utxoLegacy: extractRows(utxoLegacy(db)),
   getTx: extractRows(getTx(db)),
