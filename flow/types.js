@@ -66,6 +66,7 @@ declare module 'icarus-backend' {
     poolDelegatedTo: (accountDbId: number) => Promise<Array<PoolDelegatedToDbResult>>,
     hasActiveStakingKey: (accountDbId: number) => Promise<boolean>,
     rewardsForAccountDbId: (accountDbId: number) => Promise<number>,
+    epochDelegations: (accountDbId: number) => Promise<Array<EpochDelegationsDbResult>>,
   };
 
   declare type ImporterApi = {
@@ -202,5 +203,10 @@ declare module 'icarus-backend' {
 
   declare type StakeAddressIdDbResult = {
     accountDbId: number,
+  }
+
+  declare type EpochDelegationsDbResult = {
+    epochNo: number,
+    poolHashDbId: number,
   }
 }

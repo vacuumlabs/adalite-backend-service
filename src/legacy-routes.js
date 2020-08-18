@@ -252,6 +252,31 @@ const poolInfoForAccountId = async (dbApi: DbApi, accountDbId: number) => {
   return poolInfo.length ? poolInfo[0] : {}
 }
 
+const nextRewardInfo = async (dbApi: DbApi, accountDbId: number) => {
+  const epochDelegations = await dbApi.epochDelegations(accountDbId)
+  if (epochDelegations.length === 0) { return {} }
+
+  // TODO: tmp logic because of initial epoch delay, later take just the first one into account
+  const epochs = epochDelegations.map(e => e.epochNo)
+  const nextReward = epochs.includes(208) && epochs.includes(209)
+    ? epochDelegations[1]
+    : epochDelegations[0]
+  if (nextReward.epochNo === 208) {
+    nextReward.epochNo = 209
+  }
+
+  const poolInfo = await dbApi.singleStakePoolInfo(nextReward.poolHashDbId)
+  const firstDelegationEpochWithRewards = 209
+  const diff = nextReward.epochNo - firstDelegationEpochWithRewards
+  const rewardDate = moment.utc('2020-08-23 21:44:00').add(diff * 5, 'days').format('DD.MM.YYYY HH:mm')
+
+  return {
+    forEpoch: nextReward.epochNo,
+    rewardDate: `${rewardDate} UTC`,
+    metadataUrl: poolInfo.length ? poolInfo[0].url : '',
+  }
+}
+
 /**
  * Returns delegation, rewards and stake key registration for a given account
  * @param {*} db Database
@@ -265,11 +290,13 @@ const accountInfo = (dbApi: DbApi, { logger }: ServerConfig) => async (req: any)
   const delegation = accountDbId ? await poolInfoForAccountId(dbApi, accountDbId) : {}
   const hasStakingKey = accountDbId ? await dbApi.hasActiveStakingKey(accountDbId) : false
   const rewards = accountDbId ? await dbApi.rewardsForAccountDbId(accountDbId) : 0
+  const nextRewardDetails = accountDbId ? await nextRewardInfo(dbApi, accountDbId) : {}
   logger.debug('[accountInfo] query finished')
   return {
     delegation,
     hasStakingKey,
     rewards,
+    nextRewardDetails,
   }
 }
 

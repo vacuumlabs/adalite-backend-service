@@ -19,6 +19,7 @@ import type {
   StakePool,
   PoolDelegatedToDbResult,
   StakeAddressIdDbResult,
+  EpochDelegationsDbResult,
 } from 'icarus-backend'; // eslint-disable-line
 
 // helper function to avoid destructuring ".rows" in the codebase
@@ -360,6 +361,25 @@ const rewardsForAccountDbId = (db: Pool) => async (accountDbId: number): Promise
   return rewardResult.rows.length > 0 ? parseInt(rewardResult.rows[0].amount, 10) : 0
 }
 
+/**
+ * Gets delegations for the last 4 (TODO: change to 3 later) epochs
+ * @param {Db Object} db
+ * @param {number} accountDbId
+ */
+const epochDelegations = (db: Pool) => async (accountDbId: number)
+: Promise<TypedResultSet<EpochDelegationsDbResult>> =>
+  (db.query({
+    text: `SELECT DISTINCT ON (block.epoch_no) block.epoch_no as "epochNo", pu.hash_id as "poolHashDbId"
+      FROM delegation d
+      LEFT JOIN tx ON tx.id=d.tx_id
+      LEFT JOIN block ON tx.block=block.id
+      LEFT JOIN pool_update pu on d.update_id=pu.id
+      WHERE d.addr_id=$1 AND block.epoch_no >=
+        (SELECT no FROM epoch ORDER BY no desc limit 1) - 4
+      ORDER BY block.epoch_no ASC, block.slot_no DESC`,
+    values: [accountDbId],
+  }): any)
+
 export default (db: Pool): DbApi => ({
   filterUsedAddresses: extractRows(filterUsedAddresses(db)),
   utxoForAddresses: extractRows(utxoForAddresses(db)),
@@ -382,4 +402,5 @@ export default (db: Pool): DbApi => ({
   poolDelegatedTo: extractRows(poolDelegatedTo(db)),
   hasActiveStakingKey: hasActiveStakingKey(db),
   rewardsForAccountDbId: rewardsForAccountDbId(db),
+  epochDelegations: extractRows(epochDelegations(db)),
 })
