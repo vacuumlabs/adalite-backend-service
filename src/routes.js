@@ -213,6 +213,16 @@ const bestBlock = (dbApi: DbApi) => async () => {
 
 
 /**
+ * This endpoint returns the last slot stored in the database.
+ * @param {*} db Database
+ * @param {*} Server Config Object
+ */
+const bestSlot = (dbApi: DbApi) => async () => {
+  const result = await dbApi.bestSlot()
+  return { Right: { bestSlot: result } }
+}
+
+/**
  * This endpoint returns the current deployed version. The goal of this endpoint is to
  * be used by monitoring tools to check service availability.
  * @param {*} req
@@ -237,6 +247,11 @@ export default {
     method: 'get',
     path: withPrefix('/bestBlock'),
     handler: bestBlock,
+  },
+  bestSlot: {
+    method: 'get',
+    path: withPrefix('/bestSlot'),
+    handler: bestSlot,
   },
   filterUsedAddresses: {
     method: 'post',

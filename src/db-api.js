@@ -19,6 +19,7 @@ import type {
   StakePool,
   PoolDelegatedToDbResult,
   StakeAddressIdDbResult,
+  EpochDelegationsDbResult,
 } from 'icarus-backend'; // eslint-disable-line
 
 // helper function to avoid destructuring ".rows" in the codebase
@@ -246,6 +247,11 @@ const bestBlock = (db: Pool) => async (): Promise<number> => {
   return query.rows.length > 0 ? parseInt(query.rows[0].block_no, 10) : 0
 }
 
+const bestSlot = (db: Pool) => async (): Promise<number> => {
+  const query = await db.query('SELECT slot_no FROM block WHERE slot_no IS NOT NULL ORDER BY slot_no DESC LIMIT 1')
+  return query.rows.length > 0 ? parseInt(query.rows[0].slot_no, 10) : 0
+}
+
 /**
  * Queries stake_address table for id of a stake_address for later fast lookups
  * @param {Db Object} db
@@ -264,9 +270,10 @@ const retiredPoolsIdsQuery = `SELECT update_id FROM pool_retire pr
 /**
  * Gets information about a specified pool if id of this pool hash is specified,
  *  otherwise all pools are retrieved
+ * @param {boolean} hideRetiredPools - boolean used to filter retired pools
  * @param {number=} poolHashDbId - database id of a given pool hash
  */
-const stakePoolsQuery = (poolHashDbId?: number) => `SELECT 
+const stakePoolsQuery = (hideRetiredPools: boolean, poolHashDbId?: number) => `SELECT 
   sp."poolHash", sp.pledge, sp.margin, sp."fixedCost", sp.url FROM
     (SELECT 
       DISTINCT ON (ph.hash) RIGHT(ph.hash::text, -2) as "poolHash", p.pledge, p.margin,
@@ -278,7 +285,7 @@ const stakePoolsQuery = (poolHashDbId?: number) => `SELECT
       ${poolHashDbId ? `WHERE ph.id=${poolHashDbId}` : ''}
       ORDER BY ph.hash, p.registered_tx_id DESC
     ) sp
-  WHERE sp.update_id NOT IN (${retiredPoolsIdsQuery})
+  ${hideRetiredPools ? `WHERE sp.update_id NOT IN (${retiredPoolsIdsQuery})` : ''}
 `
 
 /**
@@ -287,7 +294,7 @@ const stakePoolsQuery = (poolHashDbId?: number) => `SELECT
  */
 const stakePoolsInfo = (db: Pool) => async ()
 : Promise<TypedResultSet<StakePool>> => (
-    db.query(stakePoolsQuery()): any)
+    db.query(stakePoolsQuery(true)): any)
 
 /**
  * Gets information for a single stake pool specified by its hash
@@ -296,7 +303,7 @@ const stakePoolsInfo = (db: Pool) => async ()
  */
 const singleStakePoolInfo = (db: Pool) => async (poolDbId: number)
 : Promise<TypedResultSet<StakePool>> =>
-  (db.query(stakePoolsQuery(poolDbId)): any)
+  (db.query(stakePoolsQuery(false, poolDbId)): any)
 
 /**
  * Gets id of pool that the given account delegates to
@@ -307,12 +314,13 @@ const poolDelegatedTo = (db: Pool) => async (accountDbId: number)
 : Promise<TypedResultSet<PoolDelegatedToDbResult>> =>
   (db.query({
     text: `SELECT
-      p.hash_id AS "poolHashDbId" FROM pool_update AS p
+      p.hash_id AS "poolHashDbId", pr.retiring_epoch AS "retiringEpoch" FROM pool_update AS p
       LEFT JOIN delegation AS d ON d.update_id=p.id
-      LEFT JOIN tx ON d.tx_id=tx.id      
+      LEFT JOIN tx ON d.tx_id=tx.id
+      LEFT JOIN pool_retire pr on pr.update_id=p.id
       WHERE d.addr_id=$1
       ORDER BY tx.block DESC
-      LIMIT 1`, // TODO: take deregistration into account when it's implemented
+      LIMIT 1`,
     values: [accountDbId],
   }): any)
 
@@ -355,12 +363,41 @@ const rewardsForAccountDbId = (db: Pool) => async (accountDbId: number): Promise
   return rewardResult.rows.length > 0 ? parseInt(rewardResult.rows[0].amount, 10) : 0
 }
 
+/**
+ * Gets delegations for the last 4 (TODO: change to 3 later) epochs
+ * @param {Db Object} db
+ * @param {number} accountDbId
+ * @param {number} epoch
+ */
+const epochDelegations = (db: Pool) => async (accountDbId: number, epoch: number)
+: Promise<TypedResultSet<EpochDelegationsDbResult>> =>
+  (db.query({
+    text: `SELECT DISTINCT ON (block.epoch_no) block.epoch_no as "epochNo", pu.hash_id as "poolHashDbId"
+      FROM delegation d
+      LEFT JOIN tx ON tx.id=d.tx_id
+      LEFT JOIN block ON tx.block=block.id
+      LEFT JOIN pool_update pu on d.update_id=pu.id
+      WHERE d.addr_id=$1 AND block.epoch_no >= ($2 - 4)
+      ORDER BY block.epoch_no ASC, block.slot_no DESC`,
+    values: [accountDbId, epoch],
+  }): any)
+
+/**
+ * Gets current epoch
+ * @param {Db Object} db
+ */
+const currentEpoch = (db: Pool) => async (): Promise<number> => {
+  const query = await db.query('SELECT no FROM epoch ORDER BY no desc limit 1')
+  return query.rows.length > 0 ? parseInt(query.rows[0].no, 10) : 0
+}
+
 export default (db: Pool): DbApi => ({
   filterUsedAddresses: extractRows(filterUsedAddresses(db)),
   utxoForAddresses: extractRows(utxoForAddresses(db)),
   utxoSumForAddresses: extractRows(utxoSumForAddresses(db)),
   transactionsHistoryForAddresses: extractRows(transactionsHistoryForAddresses(db)),
   bestBlock: bestBlock(db),
+  bestSlot: bestSlot(db),
   // legacy cardano-db-sync schema
   utxoLegacy: extractRows(utxoLegacy(db)),
   getTx: extractRows(getTx(db)),
@@ -376,4 +413,6 @@ export default (db: Pool): DbApi => ({
   poolDelegatedTo: extractRows(poolDelegatedTo(db)),
   hasActiveStakingKey: hasActiveStakingKey(db),
   rewardsForAccountDbId: rewardsForAccountDbId(db),
+  epochDelegations: extractRows(epochDelegations(db)),
+  currentEpoch: currentEpoch(db),
 })
