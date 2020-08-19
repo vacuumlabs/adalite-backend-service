@@ -315,7 +315,7 @@ const poolDelegatedTo = (db: Pool) => async (accountDbId: number)
     text: `SELECT
       p.hash_id AS "poolHashDbId" FROM pool_update AS p
       LEFT JOIN delegation AS d ON d.update_id=p.id
-      LEFT JOIN tx ON d.tx_id=tx.id      
+      LEFT JOIN tx ON d.tx_id=tx.id
       WHERE d.addr_id=$1
       ORDER BY tx.block DESC
       LIMIT 1`, // TODO: take deregistration into account when it's implemented
@@ -365,8 +365,9 @@ const rewardsForAccountDbId = (db: Pool) => async (accountDbId: number): Promise
  * Gets delegations for the last 4 (TODO: change to 3 later) epochs
  * @param {Db Object} db
  * @param {number} accountDbId
+ * @param {number} epoch
  */
-const epochDelegations = (db: Pool) => async (accountDbId: number)
+const epochDelegations = (db: Pool) => async (accountDbId: number, epoch: number)
 : Promise<TypedResultSet<EpochDelegationsDbResult>> =>
   (db.query({
     text: `SELECT DISTINCT ON (block.epoch_no) block.epoch_no as "epochNo", pu.hash_id as "poolHashDbId"
@@ -374,11 +375,19 @@ const epochDelegations = (db: Pool) => async (accountDbId: number)
       LEFT JOIN tx ON tx.id=d.tx_id
       LEFT JOIN block ON tx.block=block.id
       LEFT JOIN pool_update pu on d.update_id=pu.id
-      WHERE d.addr_id=$1 AND block.epoch_no >=
-        (SELECT no FROM epoch ORDER BY no desc limit 1) - 4
+      WHERE d.addr_id=$1 AND block.epoch_no >= ($2 - 4)
       ORDER BY block.epoch_no ASC, block.slot_no DESC`,
-    values: [accountDbId],
+    values: [accountDbId, epoch],
   }): any)
+
+/**
+ * Gets current epoch
+ * @param {Db Object} db
+ */
+const currentEpoch = (db: Pool) => async (): Promise<number> => {
+  const query = await db.query('SELECT no FROM epoch ORDER BY no desc limit 1')
+  return query.rows.length > 0 ? parseInt(query.rows[0].no, 10) : 0
+}
 
 export default (db: Pool): DbApi => ({
   filterUsedAddresses: extractRows(filterUsedAddresses(db)),
@@ -403,4 +412,5 @@ export default (db: Pool): DbApi => ({
   hasActiveStakingKey: hasActiveStakingKey(db),
   rewardsForAccountDbId: rewardsForAccountDbId(db),
   epochDelegations: extractRows(epochDelegations(db)),
+  currentEpoch: currentEpoch(db),
 })

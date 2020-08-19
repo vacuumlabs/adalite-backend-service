@@ -66,7 +66,11 @@ declare module 'icarus-backend' {
     poolDelegatedTo: (accountDbId: number) => Promise<Array<PoolDelegatedToDbResult>>,
     hasActiveStakingKey: (accountDbId: number) => Promise<boolean>,
     rewardsForAccountDbId: (accountDbId: number) => Promise<number>,
-    epochDelegations: (accountDbId: number) => Promise<Array<EpochDelegationsDbResult>>,
+    epochDelegations: (
+      accountDbId: number,
+      epoch: number,
+    ) => Promise<Array<EpochDelegationsDbResult>>,
+    currentEpoch: () => Promise<number>,
   };
 
   declare type ImporterApi = {
