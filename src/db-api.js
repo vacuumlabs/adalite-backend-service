@@ -313,12 +313,13 @@ const poolDelegatedTo = (db: Pool) => async (accountDbId: number)
 : Promise<TypedResultSet<PoolDelegatedToDbResult>> =>
   (db.query({
     text: `SELECT
-      p.hash_id AS "poolHashDbId" FROM pool_update AS p
+      p.hash_id AS "poolHashDbId", pr.retiring_epoch AS "retiringEpoch" FROM pool_update AS p
       LEFT JOIN delegation AS d ON d.update_id=p.id
       LEFT JOIN tx ON d.tx_id=tx.id
+      LEFT JOIN pool_retire pr on pr.update_id=p.id
       WHERE d.addr_id=$1
       ORDER BY tx.block DESC
-      LIMIT 1`, // TODO: take deregistration into account when it's implemented
+      LIMIT 1`,
     values: [accountDbId],
   }): any)
 

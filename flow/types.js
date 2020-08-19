@@ -203,6 +203,7 @@ declare module 'icarus-backend' {
 
   declare type PoolDelegatedToDbResult = {
     poolHashDbId: number,
+    retiringEpoch: number,
   }
 
   declare type StakeAddressIdDbResult = {

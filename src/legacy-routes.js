@@ -249,7 +249,12 @@ const poolInfoForAccountId = async (dbApi: DbApi, accountDbId: number) => {
   const [delegatedPool] = await dbApi.poolDelegatedTo(accountDbId)
   if (!delegatedPool || !delegatedPool.poolHashDbId) { return {} }
   const poolInfo = await dbApi.singleStakePoolInfo(delegatedPool.poolHashDbId)
-  return poolInfo.length ? poolInfo[0] : {}
+  return poolInfo.length
+    ? {
+      ...poolInfo[0],
+      retiringEpoch: delegatedPool.retiringEpoch,
+    }
+    : {}
 }
 
 const nextRewardInfo = async (dbApi: DbApi, accountDbId: number, currentEpoch: number) => {
@@ -287,15 +292,16 @@ const accountInfo = (dbApi: DbApi, { logger }: ServerConfig) => async (req: any)
   const { account } = req.params
   const accountDbIdResult = await dbApi.stakeAddressId(wrapHashPrefix(account))
   const accountDbId = accountDbIdResult.length > 0 ? accountDbIdResult[0].accountDbId : undefined
+  const currentEpoch = await dbApi.currentEpoch()
   const delegation = accountDbId ? await poolInfoForAccountId(dbApi, accountDbId) : {}
   const hasStakingKey = accountDbId ? await dbApi.hasActiveStakingKey(accountDbId) : false
   const rewards = accountDbId ? await dbApi.rewardsForAccountDbId(accountDbId) : 0
-  const currentEpoch = await dbApi.currentEpoch()
   const nextRewardDetails = accountDbId
     ? await nextRewardInfo(dbApi, accountDbId, currentEpoch)
     : {}
   logger.debug('[accountInfo] query finished')
   return {
+    currentEpoch,
     delegation,
     hasStakingKey,
     rewards,
