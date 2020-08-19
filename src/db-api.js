@@ -270,9 +270,10 @@ const retiredPoolsIdsQuery = `SELECT update_id FROM pool_retire pr
 /**
  * Gets information about a specified pool if id of this pool hash is specified,
  *  otherwise all pools are retrieved
+ * @param {boolean} hideRetiredPools - boolean used to filter retired pools
  * @param {number=} poolHashDbId - database id of a given pool hash
  */
-const stakePoolsQuery = (poolHashDbId?: number) => `SELECT 
+const stakePoolsQuery = (hideRetiredPools: boolean, poolHashDbId?: number) => `SELECT 
   sp."poolHash", sp.pledge, sp.margin, sp."fixedCost", sp.url FROM
     (SELECT 
       DISTINCT ON (ph.hash) RIGHT(ph.hash::text, -2) as "poolHash", p.pledge, p.margin,
@@ -284,7 +285,7 @@ const stakePoolsQuery = (poolHashDbId?: number) => `SELECT
       ${poolHashDbId ? `WHERE ph.id=${poolHashDbId}` : ''}
       ORDER BY ph.hash, p.registered_tx_id DESC
     ) sp
-  WHERE sp.update_id NOT IN (${retiredPoolsIdsQuery})
+  ${hideRetiredPools ? `WHERE sp.update_id NOT IN (${retiredPoolsIdsQuery})` : ''}
 `
 
 /**
@@ -293,7 +294,7 @@ const stakePoolsQuery = (poolHashDbId?: number) => `SELECT
  */
 const stakePoolsInfo = (db: Pool) => async ()
 : Promise<TypedResultSet<StakePool>> => (
-    db.query(stakePoolsQuery()): any)
+    db.query(stakePoolsQuery(true)): any)
 
 /**
  * Gets information for a single stake pool specified by its hash
@@ -302,7 +303,7 @@ const stakePoolsInfo = (db: Pool) => async ()
  */
 const singleStakePoolInfo = (db: Pool) => async (poolDbId: number)
 : Promise<TypedResultSet<StakePool>> =>
-  (db.query(stakePoolsQuery(poolDbId)): any)
+  (db.query(stakePoolsQuery(false, poolDbId)): any)
 
 /**
  * Gets id of pool that the given account delegates to
