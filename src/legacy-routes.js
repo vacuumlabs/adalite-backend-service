@@ -14,6 +14,7 @@ import type {
   CoinObject,
   DbApi,
 } from 'icarus-backend'; // eslint-disable-line
+import { _ } from 'lodash'
 import { wrapHashPrefix, unwrapHashPrefix, groupInputsOutputs } from './helpers'
 
 const isValidAddress = (address) => true // eslint-disable-line no-unused-vars
@@ -236,8 +237,12 @@ const bulkAddressSummary = (dbApi: any, { logger, apiConfig }: ServerConfig) => 
 const stakePools = (dbApi: DbApi, { logger }: ServerConfig) => async () => {
   logger.debug('[stakePools] query started')
   const result = await dbApi.stakePoolsInfo()
+  const poolsMappedByHash = _.chain(result)
+    .keyBy('poolHash')
+    .mapValues(pool => _.omit(pool, 'poolHash'))
+    .value()
   logger.debug('[stakePools] query finished')
-  return result
+  return poolsMappedByHash
 }
 
 /**
