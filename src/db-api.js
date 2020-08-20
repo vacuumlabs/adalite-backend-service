@@ -173,14 +173,14 @@ const getTransactions = (db: Pool) => async (addresses: Array<string>)
 : Promise<TypedResultSet<Tx>> =>
   (db.query({
     text: `SELECT DISTINCT
-      tx.id as "dbId", tx.hash::text, block.time
+      tx.id as "dbId", tx.hash::text, block.time, tx.fee
       FROM block 
       INNER JOIN tx ON block.id = tx.block 
       INNER JOIN tx_out ON tx.id = tx_out.tx_id
       WHERE tx_out.address = ANY($1)
     UNION
     SELECT DISTINCT 
-      tx.id as "dbId", tx.hash::text, block.time
+      tx.id as "dbId", tx.hash::text, block.time, tx.fee
       FROM block 
       INNER JOIN tx ON block.id = tx.block 
       INNER JOIN tx_in ON tx.id = tx_in.tx_in_id 
@@ -260,11 +260,11 @@ const bestSlot = (db: Pool) => async (): Promise<number> => {
 const stakeAddressId = (db: Pool) => async (account: string)
 : Promise<TypedResultSet<StakeAddressIdDbResult>> =>
   (db.query({
-    text: 'SELECT id as "accountDbId" from stake_address WHERE hash=$1',
+    text: 'SELECT id as "accountDbId" from stake_address WHERE hash_raw=$1',
     values: [account],
   }): any)
 
-const retiredPoolsIdsQuery = `SELECT update_id FROM pool_retire pr
+const retiredPoolsIdsQuery = `SELECT hash_id FROM pool_retire pr
   WHERE retiring_epoch < (SELECT no FROM epoch ORDER BY no DESC limit 1)`
 
 /**
@@ -277,15 +277,14 @@ const stakePoolsQuery = (hideRetiredPools: boolean, poolHashDbId?: number) => `S
   sp."poolHash", sp.pledge, sp.margin, sp."fixedCost", sp.url FROM
     (SELECT 
       DISTINCT ON (ph.hash) RIGHT(ph.hash::text, -2) as "poolHash", p.pledge, p.margin,
-        p.fixed_cost as "fixedCost", pmd.url, p.id as update_id
+        p.fixed_cost as "fixedCost", pmd.url, ph.id as pool_hash_id
       FROM pool_update AS p
       LEFT JOIN pool_meta_data AS pmd ON p.meta=pmd.id
       LEFT JOIN pool_hash AS ph ON p.hash_id=ph.id
-      LEFT JOIN pool_owner AS po ON po.pool_id=ph.id
       ${poolHashDbId ? `WHERE ph.id=${poolHashDbId}` : ''}
       ORDER BY ph.hash, p.registered_tx_id DESC
     ) sp
-  ${hideRetiredPools ? `WHERE sp.update_id NOT IN (${retiredPoolsIdsQuery})` : ''}
+  ${hideRetiredPools ? `WHERE sp.pool_hash_id NOT IN (${retiredPoolsIdsQuery})` : ''}
 `
 
 /**
@@ -314,10 +313,9 @@ const poolDelegatedTo = (db: Pool) => async (accountDbId: number)
 : Promise<TypedResultSet<PoolDelegatedToDbResult>> =>
   (db.query({
     text: `SELECT
-      p.hash_id AS "poolHashDbId", pr.retiring_epoch AS "retiringEpoch" FROM pool_update AS p
-      LEFT JOIN delegation AS d ON d.update_id=p.id
+      d.pool_id AS "poolHashDbId", pr.retiring_epoch AS "retiringEpoch" FROM delegation AS d
       LEFT JOIN tx ON d.tx_id=tx.id
-      LEFT JOIN pool_retire pr on pr.update_id=p.id
+      LEFT JOIN pool_retire pr on pr.hash_id=d.pool_id
       WHERE d.addr_id=$1
       ORDER BY tx.block DESC
       LIMIT 1`,
@@ -364,22 +362,22 @@ const rewardsForAccountDbId = (db: Pool) => async (accountDbId: number): Promise
 }
 
 /**
- * Gets delegations for the last 4 (TODO: change to 3 later) epochs
+ * Gets delegations for the last 4 epochs
  * @param {Db Object} db
  * @param {number} accountDbId
  * @param {number} epoch
  */
-const epochDelegations = (db: Pool) => async (accountDbId: number, epoch: number)
+const epochDelegations = (db: Pool) => async (accountDbId: number)
 : Promise<TypedResultSet<EpochDelegationsDbResult>> =>
   (db.query({
-    text: `SELECT DISTINCT ON (block.epoch_no) block.epoch_no as "epochNo", pu.hash_id as "poolHashDbId"
+    text: `SELECT DISTINCT ON (block.epoch_no) block.epoch_no as "epochNo", d.pool_id as "poolHashDbId"
       FROM delegation d
       LEFT JOIN tx ON tx.id=d.tx_id
       LEFT JOIN block ON tx.block=block.id
-      LEFT JOIN pool_update pu on d.update_id=pu.id
-      WHERE d.addr_id=$1 AND block.epoch_no >= ($2 - 4)
-      ORDER BY block.epoch_no ASC, block.slot_no DESC`,
-    values: [accountDbId, epoch],
+      WHERE d.addr_id=$1
+      ORDER BY block.epoch_no DESC, block.slot_no DESC
+      LIMIT 4`, // we don't need more than 4 latest epochs
+    values: [accountDbId],
   }): any)
 
 /**

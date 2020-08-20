@@ -66,10 +66,7 @@ declare module 'icarus-backend' {
     poolDelegatedTo: (accountDbId: number) => Promise<Array<PoolDelegatedToDbResult>>,
     hasActiveStakingKey: (accountDbId: number) => Promise<boolean>,
     rewardsForAccountDbId: (accountDbId: number) => Promise<number>,
-    epochDelegations: (
-      accountDbId: number,
-      epoch: number,
-    ) => Promise<Array<EpochDelegationsDbResult>>,
+    epochDelegations: (accountDbId: number) => Promise<Array<EpochDelegationsDbResult>>,
     currentEpoch: () => Promise<number>,
   };
 
@@ -182,6 +179,7 @@ declare module 'icarus-backend' {
     dbId: number,
     hash: string,
     time: Date,
+    fee: number,
   }
 
   declare type TxEntry = {
@@ -191,6 +189,7 @@ declare module 'icarus-backend' {
     ctbOutputs: Array<TxInputOutputEntry>,
     ctbInputSum: CoinObject,
     ctbOutputSum: CoinObject,
+    fee: number,
   }
 
   declare type StakePool = {

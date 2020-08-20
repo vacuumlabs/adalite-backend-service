@@ -14,6 +14,7 @@ import type {
   CoinObject,
   DbApi,
 } from 'icarus-backend'; // eslint-disable-line
+import { _ } from 'lodash'
 import { wrapHashPrefix, unwrapHashPrefix, groupInputsOutputs } from './helpers'
 
 const isValidAddress = (address) => true // eslint-disable-line no-unused-vars
@@ -48,6 +49,7 @@ const initializeTxEntry = (
   ctbOutputs: txOutputs.map(initializeTxInputOutputEntry),
   ctbInputSum: getCoinObject(arraySum(txInputs.map(txInput => txInput.value))),
   ctbOutputSum: getCoinObject(arraySum(txOutputs.map(txOutput => txOutput.value))),
+  fee: tx.fee,
 })
 
 /**
@@ -229,11 +231,27 @@ const bulkAddressSummary = (dbApi: any, { logger, apiConfig }: ServerConfig) => 
 }
 
 /**
- * Gets all valid stake pools and their information
+ * Gets all valid stake pools and their information as map
  * @param {*} db Database
  * @param {*} Server Server Config Object
  */
 const stakePools = (dbApi: DbApi, { logger }: ServerConfig) => async () => {
+  logger.debug('[stakePools] query started')
+  const result = await dbApi.stakePoolsInfo()
+  const poolsMappedByHash = _.chain(result)
+    .keyBy('poolHash')
+    .mapValues(pool => _.omit(pool, 'poolHash'))
+    .value()
+  logger.debug('[stakePools] query finished')
+  return poolsMappedByHash
+}
+
+/**
+ * Gets all valid stake pools and their information as array
+ * @param {*} db Database
+ * @param {*} Server Server Config Object
+ */
+const stakePoolsLegacy = (dbApi: DbApi, { logger }: ServerConfig) => async () => {
   logger.debug('[stakePools] query started')
   const result = await dbApi.stakePoolsInfo()
   logger.debug('[stakePools] query finished')
@@ -258,17 +276,15 @@ const poolInfoForAccountId = async (dbApi: DbApi, accountDbId: number) => {
 }
 
 const nextRewardInfo = async (dbApi: DbApi, accountDbId: number, currentEpoch: number) => {
-  const epochDelegations = await dbApi.epochDelegations(accountDbId, currentEpoch)
+  const epochDelegations = await dbApi.epochDelegations(accountDbId)
   if (epochDelegations.length === 0) { return {} }
 
-  // TODO: tmp logic because of initial epoch delay, later take just the first one into account
-  const epochs = epochDelegations.map(e => e.epochNo)
-  const nextReward = epochs.includes(208) && epochs.includes(209)
-    ? epochDelegations[1]
-    : epochDelegations[0]
-  if (nextReward.epochNo === 208) {
-    nextReward.epochNo = 209
-  }
+  let i = epochDelegations.length - 1
+  const currentlyRewardedEpoch = currentEpoch - 3 // rewards are distributed with a lag of 3 epochs
+  // find active delegation for nextRewardedEpoch, if not present, take next first epoch
+  while (i > 0 && epochDelegations[i - 1].epochNo <= currentlyRewardedEpoch) { i -= 1 }
+  const nextReward = epochDelegations[i]
+  nextReward.epochNo = Math.max(currentlyRewardedEpoch, nextReward.epochNo)
 
   const poolInfo = await dbApi.singleStakePoolInfo(nextReward.poolHashDbId)
   const firstDelegationEpochWithRewards = 209
@@ -337,8 +353,13 @@ export default {
   },
   stakePools: {
     method: 'get',
-    path: withPrefix('/stakePools'),
+    path: withPrefix('/v2/stakePools'),
     handler: stakePools,
+  },
+  stakePoolsLegacy: {
+    method: 'get',
+    path: withPrefix('/stakePools'),
+    handler: stakePoolsLegacy,
   },
   accountInfo: {
     method: 'get',
