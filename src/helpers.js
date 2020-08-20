@@ -16,3 +16,7 @@ export const groupInputsOutputs = (
 ) => _(txInputsOutputs)
   .groupBy(tx => tx.txDbId)
   .each(group => group.sort((a, b) => a.index - b.index))
+export const assignKeyEntryToObj = (obj: Object, key: string, entry: any) => ({
+  ...obj,
+  [key]: entry,
+})

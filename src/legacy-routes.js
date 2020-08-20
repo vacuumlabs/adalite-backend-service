@@ -15,7 +15,7 @@ import type {
   DbApi,
 } from 'icarus-backend'; // eslint-disable-line
 import { _ } from 'lodash'
-import { wrapHashPrefix, unwrapHashPrefix, groupInputsOutputs } from './helpers'
+import { wrapHashPrefix, unwrapHashPrefix, groupInputsOutputs, assignKeyEntryToObj } from './helpers'
 
 const isValidAddress = (address) => true // eslint-disable-line no-unused-vars
 const withPrefix = route => `/api${route}`
@@ -299,15 +299,25 @@ const nextRewardInfo = async (dbApi: DbApi, accountDbId: number, currentEpoch: n
 }
 
 /**
+ * Helper for getting account database id for a staking address
+ * @param {*} db Database
+ * @param {string} stakeAddress Server Config Object
+ */
+const getStakeAddrDbId = async (dbApi: DbApi, stakeAddress: string) => {
+  const stakeAddrDbIdResult = await dbApi.stakeAddressId(wrapHashPrefix(stakeAddress))
+  return stakeAddrDbIdResult.length > 0
+    ? stakeAddrDbIdResult[0].accountDbId : undefined
+}
+
+/**
  * Returns delegation, rewards and stake key registration for a given account
  * @param {*} db Database
  * @param {*} Server Server Config Object
  */
 const accountInfo = (dbApi: DbApi, { logger }: ServerConfig) => async (req: any) => {
   logger.debug('[accountInfo] query started')
-  const { account } = req.params
-  const accountDbIdResult = await dbApi.stakeAddressId(wrapHashPrefix(account))
-  const accountDbId = accountDbIdResult.length > 0 ? accountDbIdResult[0].accountDbId : undefined
+  const { stakeAddress } = req.params
+  const accountDbId = await getStakeAddrDbId(dbApi, stakeAddress)
   const delegation = accountDbId ? await poolInfoForAccountId(dbApi, accountDbId) : {}
   const hasStakingKey = accountDbId ? await dbApi.hasActiveStakingKey(accountDbId) : false
   const rewards = accountDbId ? await dbApi.rewardsForAccountDbId(accountDbId) : 0
@@ -323,6 +333,37 @@ const accountInfo = (dbApi: DbApi, { logger }: ServerConfig) => async (req: any)
     rewards,
     nextRewardDetails,
   }
+}
+
+/**
+ * Returns delegation, rewards and stake key registration for a given account
+ * @param {*} db Database
+ * @param {*} Server Server Config Object
+ */
+const stakingHistory = (dbApi: DbApi, { logger }: ServerConfig) => async (req: any) => {
+  logger.debug('[stakingHistory] query started')
+  const { stakeAddress } = req.params
+  const accountDbId = await getStakeAddrDbId(dbApi, stakeAddress)
+  const delegations = accountDbId ? await dbApi.delegationHistory(accountDbId) : []
+  const typedDelegations = delegations.map(d => assignKeyEntryToObj(d, 'type', 'Stake delegation'))
+  return typedDelegations
+
+
+  // const delegation = accountDbId ? await poolInfoForAccountId(dbApi, accountDbId) : {}
+  // const hasStakingKey = accountDbId ? await dbApi.hasActiveStakingKey(accountDbId) : false
+  // const rewards = accountDbId ? await dbApi.rewardsForAccountDbId(accountDbId) : 0
+  // const currentEpoch = await dbApi.currentEpoch()
+  // const nextRewardDetails = accountDbId
+  //   ? await nextRewardInfo(dbApi, accountDbId, currentEpoch)
+  //   : {}
+  // logger.debug('[accountInfo] query finished')
+  // return {
+  //   currentEpoch,
+  //   delegation,
+  //   hasStakingKey,
+  //   rewards,
+  //   nextRewardDetails,
+  // }
 }
 
 export default {
@@ -363,7 +404,12 @@ export default {
   },
   accountInfo: {
     method: 'get',
-    path: withPrefix('/account/info/:account'),
+    path: withPrefix('/account/info/:stakeAddress'),
     handler: accountInfo,
   },
+  stakingHistory: {
+    method: 'get',
+    path: withPrefix('/account/stakingHistory/:stakeAddress'),
+    handler: stakingHistory,
+  }
 }
