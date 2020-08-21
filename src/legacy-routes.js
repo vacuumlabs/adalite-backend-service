@@ -231,7 +231,7 @@ const bulkAddressSummary = (dbApi: any, { logger, apiConfig }: ServerConfig) => 
 }
 
 /**
- * Gets all valid stake pools and their information
+ * Gets all valid stake pools and their information as map
  * @param {*} db Database
  * @param {*} Server Server Config Object
  */
@@ -244,6 +244,18 @@ const stakePools = (dbApi: DbApi, { logger }: ServerConfig) => async () => {
     .value()
   logger.debug('[stakePools] query finished')
   return poolsMappedByHash
+}
+
+/**
+ * Gets all valid stake pools and their information as array
+ * @param {*} db Database
+ * @param {*} Server Server Config Object
+ */
+const stakePoolsLegacy = (dbApi: DbApi, { logger }: ServerConfig) => async () => {
+  logger.debug('[stakePools] query started')
+  const result = await dbApi.stakePoolsInfo()
+  logger.debug('[stakePools] query finished')
+  return result
 }
 
 /**
@@ -343,8 +355,13 @@ export default {
   },
   stakePools: {
     method: 'get',
-    path: withPrefix('/stakePools'),
+    path: withPrefix('/v2/stakePools'),
     handler: stakePools,
+  },
+  stakePoolsLegacy: {
+    method: 'get',
+    path: withPrefix('/stakePools'),
+    handler: stakePoolsLegacy,
   },
   accountInfo: {
     method: 'get',
