@@ -21,6 +21,7 @@ import type {
   StakeAddressIdDbResult,
   EpochDelegationsDbResult,
   DelegationHistoryDbResult,
+  WithdrawalHistoryDbResult,
 } from 'icarus-backend'; // eslint-disable-line
 
 // helper function to avoid destructuring ".rows" in the codebase
@@ -391,7 +392,7 @@ const currentEpoch = (db: Pool) => async (): Promise<number> => {
 }
 
 /**
- * Gets complete delegation history for an account
+ * Gets complete delegation history for a stake address db id
  * @param {Db Object} db
  * @param {number} accountDbId
  */
@@ -405,6 +406,23 @@ const delegationHistory = (db: Pool) => async (accountDbId: number)
       LEFT JOIN pool_update pu ON d.update_id=pu.id
       LEFT JOIN pool_hash ph ON pu.hash_id=ph.id
       WHERE d.addr_id=$1
+      ORDER BY block.slot_no DESC`,
+    values: [accountDbId],
+  }): any)
+
+/**
+ * Gets complete withdrawal history for a stake address db id
+ * @param {Db Object} db
+ * @param {number} accountDbId
+ */
+const withdrawalHistory = (db: Pool) => async (accountDbId: number)
+: Promise<TypedResultSet<WithdrawalHistoryDbResult>> =>
+  (db.query({
+    text: `SELECT block.epoch_no as "epochNo", block.time, amount
+      FROM withdrawal w
+      LEFT JOIN tx ON tx.id=w.tx_id
+      LEFT JOIN block ON tx.block=block.id
+      WHERE w.addr_id=$1
       ORDER BY block.slot_no DESC`,
     values: [accountDbId],
   }): any)
@@ -434,4 +452,5 @@ export default (db: Pool): DbApi => ({
   epochDelegations: extractRows(epochDelegations(db)),
   currentEpoch: currentEpoch(db),
   delegationHistory: extractRows(delegationHistory(db)),
+  withdrawalHistory: extractRows(withdrawalHistory(db)),
 })

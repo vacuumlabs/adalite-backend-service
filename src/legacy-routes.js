@@ -336,7 +336,7 @@ const accountInfo = (dbApi: DbApi, { logger }: ServerConfig) => async (req: any)
 }
 
 /**
- * Returns delegation, rewards and stake key registration for a given account
+ * Returns complete delegation history for a stake address
  * @param {*} db Database
  * @param {*} Server Server Config Object
  */
@@ -347,6 +347,20 @@ const delegationHistory = (dbApi: DbApi, { logger }: ServerConfig) => async (req
   const delegations = accountDbId ? await dbApi.delegationHistory(accountDbId) : []
   logger.debug('[delegationHistory] query finished')
   return delegations
+}
+
+/**
+ * Returns complete withdrawal history for a stake address
+ * @param {*} db Database
+ * @param {*} Server Server Config Object
+ */
+const withdrawalHistory = (dbApi: DbApi, { logger }: ServerConfig) => async (req: any) => {
+  logger.debug('[withdrawalHistory] query started')
+  const { stakeAddress } = req.params
+  const accountDbId = await getStakeAddrDbId(dbApi, stakeAddress)
+  const withdrawals = accountDbId ? await dbApi.withdrawalHistory(accountDbId) : []
+  logger.debug('[withdrawalHistory] query finished')
+  return withdrawals
 }
 
 export default {
@@ -394,5 +408,10 @@ export default {
     method: 'get',
     path: withPrefix('/account/delegationHistory/:stakeAddress'),
     handler: delegationHistory,
+  },
+  withdrawalHistory: {
+    method: 'get',
+    path: withPrefix('/account/withdrawalHistory/:stakeAddress'),
+    handler: withdrawalHistory,
   },
 }
