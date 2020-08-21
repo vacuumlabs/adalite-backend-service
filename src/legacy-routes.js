@@ -15,7 +15,7 @@ import type {
   DbApi,
 } from 'icarus-backend'; // eslint-disable-line
 import { _ } from 'lodash'
-import { wrapHashPrefix, unwrapHashPrefix, groupInputsOutputs, assignKeyEntryToObj } from './helpers'
+import { wrapHashPrefix, unwrapHashPrefix, groupInputsOutputs } from './helpers'
 
 const isValidAddress = (address) => true // eslint-disable-line no-unused-vars
 const withPrefix = route => `/api${route}`
@@ -340,30 +340,13 @@ const accountInfo = (dbApi: DbApi, { logger }: ServerConfig) => async (req: any)
  * @param {*} db Database
  * @param {*} Server Server Config Object
  */
-const stakingHistory = (dbApi: DbApi, { logger }: ServerConfig) => async (req: any) => {
-  logger.debug('[stakingHistory] query started')
+const delegationHistory = (dbApi: DbApi, { logger }: ServerConfig) => async (req: any) => {
+  logger.debug('[delegationHistory] query started')
   const { stakeAddress } = req.params
   const accountDbId = await getStakeAddrDbId(dbApi, stakeAddress)
   const delegations = accountDbId ? await dbApi.delegationHistory(accountDbId) : []
-  const typedDelegations = delegations.map(d => assignKeyEntryToObj(d, 'type', 'Stake delegation'))
-  return typedDelegations
-
-
-  // const delegation = accountDbId ? await poolInfoForAccountId(dbApi, accountDbId) : {}
-  // const hasStakingKey = accountDbId ? await dbApi.hasActiveStakingKey(accountDbId) : false
-  // const rewards = accountDbId ? await dbApi.rewardsForAccountDbId(accountDbId) : 0
-  // const currentEpoch = await dbApi.currentEpoch()
-  // const nextRewardDetails = accountDbId
-  //   ? await nextRewardInfo(dbApi, accountDbId, currentEpoch)
-  //   : {}
-  // logger.debug('[accountInfo] query finished')
-  // return {
-  //   currentEpoch,
-  //   delegation,
-  //   hasStakingKey,
-  //   rewards,
-  //   nextRewardDetails,
-  // }
+  logger.debug('[delegationHistory] query finished')
+  return delegations
 }
 
 export default {
@@ -407,9 +390,9 @@ export default {
     path: withPrefix('/account/info/:stakeAddress'),
     handler: accountInfo,
   },
-  stakingHistory: {
+  delegationHistory: {
     method: 'get',
-    path: withPrefix('/account/stakingHistory/:stakeAddress'),
-    handler: stakingHistory,
+    path: withPrefix('/account/delegationHistory/:stakeAddress'),
+    handler: delegationHistory,
   },
 }
