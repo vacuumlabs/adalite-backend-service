@@ -411,5 +411,5 @@ export default {
     method: 'get',
     path: withPrefix('/account/stakingHistory/:stakeAddress'),
     handler: stakingHistory,
-  }
+  },
 }
