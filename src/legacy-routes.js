@@ -276,17 +276,15 @@ const poolInfoForAccountId = async (dbApi: DbApi, accountDbId: number) => {
 }
 
 const nextRewardInfo = async (dbApi: DbApi, accountDbId: number, currentEpoch: number) => {
-  const epochDelegations = await dbApi.epochDelegations(accountDbId, currentEpoch)
+  const epochDelegations = await dbApi.epochDelegations(accountDbId)
   if (epochDelegations.length === 0) { return {} }
 
-  // TODO: tmp logic because of initial epoch delay, later take just the first one into account
-  const epochs = epochDelegations.map(e => e.epochNo)
-  const nextReward = epochs.includes(208) && epochs.includes(209)
-    ? epochDelegations[1]
-    : epochDelegations[0]
-  if (nextReward.epochNo === 208) {
-    nextReward.epochNo = 209
-  }
+  let i = epochDelegations.length - 1
+  const currentlyRewardedEpoch = currentEpoch - 3 // rewards are distributed with a lag of 3 epochs
+  // find active delegation for nextRewardedEpoch, if not present, take next first epoch
+  while (i > 0 && epochDelegations[i - 1].epochNo <= currentlyRewardedEpoch) { i -= 1 }
+  const nextReward = epochDelegations[i]
+  nextReward.epochNo = Math.max(currentlyRewardedEpoch, nextReward.epochNo)
 
   const poolInfo = await dbApi.singleStakePoolInfo(nextReward.poolHashDbId)
   const firstDelegationEpochWithRewards = 209

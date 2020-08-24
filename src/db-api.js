@@ -364,12 +364,12 @@ const rewardsForAccountDbId = (db: Pool) => async (accountDbId: number): Promise
 }
 
 /**
- * Gets delegations for the last 4 (TODO: change to 3 later) epochs
+ * Gets delegations for the last 4 epochs
  * @param {Db Object} db
  * @param {number} accountDbId
  * @param {number} epoch
  */
-const epochDelegations = (db: Pool) => async (accountDbId: number, epoch: number)
+const epochDelegations = (db: Pool) => async (accountDbId: number)
 : Promise<TypedResultSet<EpochDelegationsDbResult>> =>
   (db.query({
     text: `SELECT DISTINCT ON (block.epoch_no) block.epoch_no as "epochNo", pu.hash_id as "poolHashDbId"
@@ -377,9 +377,10 @@ const epochDelegations = (db: Pool) => async (accountDbId: number, epoch: number
       LEFT JOIN tx ON tx.id=d.tx_id
       LEFT JOIN block ON tx.block=block.id
       LEFT JOIN pool_update pu on d.update_id=pu.id
-      WHERE d.addr_id=$1 AND block.epoch_no >= ($2 - 4)
-      ORDER BY block.epoch_no ASC, block.slot_no DESC`,
-    values: [accountDbId, epoch],
+      WHERE d.addr_id=$1
+      ORDER BY block.epoch_no DESC, block.slot_no DESC
+      LIMIT 4`, // we don't need more than 4 latest epochs
+    values: [accountDbId],
   }): any)
 
 /**
