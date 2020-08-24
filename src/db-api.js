@@ -173,14 +173,14 @@ const getTransactions = (db: Pool) => async (addresses: Array<string>)
 : Promise<TypedResultSet<Tx>> =>
   (db.query({
     text: `SELECT DISTINCT
-      tx.id as "dbId", tx.hash::text, block.time
+      tx.id as "dbId", tx.hash::text, block.time, tx.fee
       FROM block 
       INNER JOIN tx ON block.id = tx.block 
       INNER JOIN tx_out ON tx.id = tx_out.tx_id
       WHERE tx_out.address = ANY($1)
     UNION
     SELECT DISTINCT 
-      tx.id as "dbId", tx.hash::text, block.time
+      tx.id as "dbId", tx.hash::text, block.time, tx.fee
       FROM block 
       INNER JOIN tx ON block.id = tx.block 
       INNER JOIN tx_in ON tx.id = tx_in.tx_in_id 

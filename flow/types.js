@@ -182,6 +182,7 @@ declare module 'icarus-backend' {
     dbId: number,
     hash: string,
     time: Date,
+    fee: number,
   }
 
   declare type TxEntry = {
@@ -191,6 +192,7 @@ declare module 'icarus-backend' {
     ctbOutputs: Array<TxInputOutputEntry>,
     ctbInputSum: CoinObject,
     ctbOutputSum: CoinObject,
+    fee: number,
   }
 
   declare type StakePool = {

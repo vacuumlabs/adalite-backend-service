@@ -49,6 +49,7 @@ const initializeTxEntry = (
   ctbOutputs: txOutputs.map(initializeTxInputOutputEntry),
   ctbInputSum: getCoinObject(arraySum(txInputs.map(txInput => txInput.value))),
   ctbOutputSum: getCoinObject(arraySum(txOutputs.map(txOutput => txOutput.value))),
+  fee: tx.fee,
 })
 
 /**
