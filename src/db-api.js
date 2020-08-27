@@ -403,8 +403,7 @@ const delegationHistory = (db: Pool) => async (accountDbId: number)
       FROM delegation d
       LEFT JOIN tx ON tx.id=d.tx_id
       LEFT JOIN block ON tx.block=block.id
-      LEFT JOIN pool_update pu ON d.update_id=pu.id
-      LEFT JOIN pool_hash ph ON pu.hash_id=ph.id
+      LEFT JOIN pool_hash ph ON d.pool_id=ph.id
       WHERE d.addr_id=$1
       ORDER BY block.slot_no DESC`,
     values: [accountDbId],
