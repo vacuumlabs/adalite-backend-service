@@ -222,17 +222,20 @@ declare module 'icarus-backend' {
     epochNo: number,
     time: Date,
     poolHash: string,
+    txHash: string,
   }
 
   declare type WithdrawalHistoryDbResult = {
     epochNo: number,
     time: Date,
     amount: number,
+    txHash: string,
   }
 
   declare type StakeRegistrationHistoryDbResult = {
     epochNo: number,
     time: Date,
     action: string,
+    txHash: string,
   }
 }

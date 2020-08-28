@@ -400,7 +400,8 @@ const currentEpoch = (db: Pool) => async (): Promise<number> => {
 const delegationHistory = (db: Pool) => async (accountDbId: number)
 : Promise<TypedResultSet<DelegationHistoryDbResult>> =>
   (db.query({
-    text: `SELECT block.epoch_no as "epochNo", block.time, RIGHT(ph.hash::text, -2) as "poolHash"
+    text: `SELECT block.epoch_no as "epochNo", block.time,
+        RIGHT(ph.hash::text, -2) as "poolHash", RIGHT(tx.hash::text, -2) as "txHash"
       FROM delegation d
       LEFT JOIN tx ON tx.id=d.tx_id
       LEFT JOIN block ON tx.block=block.id
@@ -418,7 +419,8 @@ const delegationHistory = (db: Pool) => async (accountDbId: number)
 const withdrawalHistory = (db: Pool) => async (accountDbId: number)
 : Promise<TypedResultSet<WithdrawalHistoryDbResult>> =>
   (db.query({
-    text: `SELECT block.epoch_no as "epochNo", block.time, amount
+    text: `SELECT block.epoch_no as "epochNo", block.time, amount,
+        RIGHT(tx.hash::text, -2) as "txHash"
       FROM withdrawal w
       LEFT JOIN tx ON tx.id=w.tx_id
       LEFT JOIN block ON tx.block=block.id
@@ -436,14 +438,16 @@ const stakeRegistrationHistory = (db: Pool) => async (accountDbId: number)
 : Promise<TypedResultSet<StakeRegistrationHistoryDbResult>> =>
   (db.query({
     text: `
-    SELECT "epochNo", time, action FROM 
-      (SELECT block.epoch_no as "epochNo", block.time, 'registration' as "action", block.slot_no
-          FROM stake_registration sr
-          LEFT JOIN tx ON tx.id=sr.tx_id
-          LEFT JOIN block ON tx.block=block.id
-          WHERE sr.addr_id=$1
+    SELECT "epochNo", time, action, "txHash" FROM 
+      (SELECT block.epoch_no as "epochNo", block.time, 'registration' as "action", block.slot_no,
+          RIGHT(tx.hash::text, -2) as "txHash"
+        FROM stake_registration sr
+        LEFT JOIN tx ON tx.id=sr.tx_id
+        LEFT JOIN block ON tx.block=block.id
+        WHERE sr.addr_id=$1
       UNION
-      SELECT block.epoch_no as "epochNo", block.time, 'deregistration' as "action", block.slot_no
+      SELECT block.epoch_no as "epochNo", block.time, 'deregistration' as "action", block.slot_no,
+          RIGHT(tx.hash::text, -2) as "txHash"
         FROM stake_deregistration sdr
         LEFT JOIN tx ON tx.id=sdr.tx_id
         LEFT JOIN block ON tx.block=block.id
