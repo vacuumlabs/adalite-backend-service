@@ -70,6 +70,8 @@ declare module 'icarus-backend' {
     currentEpoch: () => Promise<number>,
     delegationHistory: (accountDbId: number) => Promise<Array<DelegationHistoryDbResult>>,
     withdrawalHistory: (accountDbId: number) => Promise<Array<WithdrawalHistoryDbResult>>,
+    stakeRegistrationHistory: (accountDbId: number) =>
+      Promise<Array<StakeRegistrationHistoryDbResult>>,
   };
 
   declare type ImporterApi = {
@@ -226,5 +228,11 @@ declare module 'icarus-backend' {
     epochNo: number,
     time: Date,
     amount: number,
+  }
+
+  declare type StakeRegistrationHistoryDbResult = {
+    epochNo: number,
+    time: Date,
+    action: string,
   }
 }

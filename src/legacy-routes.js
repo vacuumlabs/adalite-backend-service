@@ -363,6 +363,20 @@ const withdrawalHistory = (dbApi: DbApi, { logger }: ServerConfig) => async (req
   return withdrawals
 }
 
+/**
+ * Returns complete stake registration history for a stake address
+ * @param {*} db Database
+ * @param {*} Server Server Config Object
+ */
+const stakeRegistrationHistory = (dbApi: DbApi, { logger }: ServerConfig) => async (req: any) => {
+  logger.debug('[stakeRegistrationHistory] query started')
+  const { stakeAddress } = req.params
+  const accountDbId = await getStakeAddrDbId(dbApi, stakeAddress)
+  const registrations = accountDbId ? await dbApi.stakeRegistrationHistory(accountDbId) : []
+  logger.debug('[stakeRegistrationHistory] query finished')
+  return registrations
+}
+
 export default {
   addressSummary: {
     method: 'get',
@@ -413,5 +427,10 @@ export default {
     method: 'get',
     path: withPrefix('/account/withdrawalHistory/:stakeAddress'),
     handler: withdrawalHistory,
+  },
+  stakeRegistrationHistory: {
+    method: 'get',
+    path: withPrefix('/account/stakeRegistrationHistory/:stakeAddress'),
+    handler: stakeRegistrationHistory,
   },
 }

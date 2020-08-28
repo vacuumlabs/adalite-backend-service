@@ -22,6 +22,7 @@ import type {
   EpochDelegationsDbResult,
   DelegationHistoryDbResult,
   WithdrawalHistoryDbResult,
+  StakeRegistrationHistoryDbResult,
 } from 'icarus-backend'; // eslint-disable-line
 
 // helper function to avoid destructuring ".rows" in the codebase
@@ -426,6 +427,31 @@ const withdrawalHistory = (db: Pool) => async (accountDbId: number)
     values: [accountDbId],
   }): any)
 
+/**
+ * Gets complete stake registration history for a stake address db id
+ * @param {Db Object} db
+ * @param {number} accountDbId
+ */
+const stakeRegistrationHistory = (db: Pool) => async (accountDbId: number)
+: Promise<TypedResultSet<StakeRegistrationHistoryDbResult>> =>
+  (db.query({
+    text: `
+    SELECT "epochNo", time, action FROM 
+      (SELECT block.epoch_no as "epochNo", block.time, 'registration' as "action", block.slot_no
+          FROM stake_registration sr
+          LEFT JOIN tx ON tx.id=sr.tx_id
+          LEFT JOIN block ON tx.block=block.id
+          WHERE sr.addr_id=$1
+      UNION
+      SELECT block.epoch_no as "epochNo", block.time, 'deregistration' as "action", block.slot_no
+        FROM stake_deregistration sdr
+        LEFT JOIN tx ON tx.id=sdr.tx_id
+        LEFT JOIN block ON tx.block=block.id
+        WHERE sdr.addr_id=$1) res
+    ORDER BY res.slot_no DESC`,
+    values: [accountDbId],
+  }): any)
+
 export default (db: Pool): DbApi => ({
   filterUsedAddresses: extractRows(filterUsedAddresses(db)),
   utxoForAddresses: extractRows(utxoForAddresses(db)),
@@ -452,4 +478,5 @@ export default (db: Pool): DbApi => ({
   currentEpoch: currentEpoch(db),
   delegationHistory: extractRows(delegationHistory(db)),
   withdrawalHistory: extractRows(withdrawalHistory(db)),
+  stakeRegistrationHistory: extractRows(stakeRegistrationHistory(db)),
 })
