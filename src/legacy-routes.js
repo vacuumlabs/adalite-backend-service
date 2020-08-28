@@ -3,6 +3,7 @@
 // import { isValidAddress } from 'cardano-crypto.js'
 import moment from 'moment'
 import Big from 'big.js'
+import { post } from 'axios'
 
 import type {
   ServerConfig,
@@ -261,7 +262,7 @@ const stakePoolsLegacy = (dbApi: DbApi, { logger }: ServerConfig) => async () =>
 /**
  * Helper for getting information for a single pool specified by pool id
  * @param {*} db Database
- * @param {number} accountDbId Server Config Object
+ * @param {number} accountDbId
  */
 const poolInfoForAccountId = async (dbApi: DbApi, accountDbId: number) => {
   const [delegatedPool] = await dbApi.poolDelegatedTo(accountDbId)
@@ -275,27 +276,91 @@ const poolInfoForAccountId = async (dbApi: DbApi, accountDbId: number) => {
     : {}
 }
 
+/**
+ * Helper for creating a reward object from epoch and poolHash
+ * @param {*} db Database
+ * @param {number} epoch
+ * @param {string} poolHash
+ */
+const getRewardObject = (epoch: number, poolHash: string) => {
+  const firstDelegationEpochWithRewards = 209
+  const diff = epoch - firstDelegationEpochWithRewards
+  return {
+    forEpoch: epoch,
+    rewardDate: moment.utc('2020-08-23 21:44:00').add(diff * 5, 'days').format(),
+    poolHash,
+  }
+}
+
+const getEmptyRewardsArray = (currentEpoch: number) => _
+  .range(currentEpoch - 3, currentEpoch + 1)
+  .map(epoch => ({ forEpoch: epoch }))
+
+/**
+ * Gets future rewards and their dates for delegations in the past 4 epochs
+ * @param {*} db Database
+ * @param {number} accountDbId
+ * @param {string} currentEpoch
+ */
 const nextRewardInfo = async (dbApi: DbApi, accountDbId: number, currentEpoch: number) => {
   const epochDelegations = await dbApi.epochDelegations(accountDbId)
-  if (epochDelegations.length === 0) { return {} }
+  if (epochDelegations.length === 0) { return getEmptyRewardsArray(currentEpoch) }
 
   let i = epochDelegations.length - 1
   const currentlyRewardedEpoch = currentEpoch - 3 // rewards are distributed with a lag of 3 epochs
   // find active delegation for nextRewardedEpoch, if not present, take next first epoch
   while (i > 0 && epochDelegations[i - 1].epochNo <= currentlyRewardedEpoch) { i -= 1 }
   const nextReward = epochDelegations[i]
-  nextReward.epochNo = Math.max(currentlyRewardedEpoch, nextReward.epochNo)
+  epochDelegations[i].epochNo = Math.max(currentlyRewardedEpoch, nextReward.epochNo)
+  epochDelegations.length = i + 1 // cut off irrelevant epochs
 
-  const poolInfo = await dbApi.singleStakePoolInfo(nextReward.poolHashDbId)
-  const firstDelegationEpochWithRewards = 209
-  const diff = nextReward.epochNo - firstDelegationEpochWithRewards
-  const rewardDate = moment.utc('2020-08-23 21:44:00').add(diff * 5, 'days').format('DD.MM.YYYY HH:mm')
+  // get pool info for retrieved delegations from db
+  const epochRewards = await Promise.all(epochDelegations
+    .reverse()
+    .map(async delegation => {
+      const poolInfo = await dbApi.singleStakePoolInfo(delegation.poolHashDbId)
+      return getRewardObject(delegation.epochNo, poolInfo.length ? poolInfo[0].poolHash : '')
+    }))
 
-  return {
-    forEpoch: nextReward.epochNo,
-    rewardDate: `${rewardDate} UTC`,
-    metadataUrl: poolInfo.length ? poolInfo[0].url : '',
+  // pad info for epochs where no delegations were sent but delegation was active
+  let j = 0
+  const paddedEpochRewards = _.range(currentlyRewardedEpoch, currentlyRewardedEpoch + 4)
+    .map(epoch => {
+      if (j < epochRewards.length && epochRewards[j].forEpoch === epoch) {
+        // mapped epoch found in epochDelegations
+        return epochRewards[j++]// eslint-disable-line no-plusplus
+      }
+      if (j === 0) { return { forEpoch: epoch } } // no past delegation to copy
+      return getRewardObject(epoch, epochRewards[j - 1].poolHash) // copy and update dates
+    })
+  return paddedEpochRewards
+}
+
+/**
+ * Helper for getting account database id for a staking address
+ * @param {*} db Database
+ * @param {string} stakeAddress Server Config Object
+ */
+const getStakeAddrDbId = async (dbApi: DbApi, stakeAddress: string) => {
+  const stakeAddrDbIdResult = await dbApi.stakeAddressId(wrapHashPrefix(stakeAddress))
+  return stakeAddrDbIdResult.length > 0
+    ? stakeAddrDbIdResult[0].accountDbId : undefined
+}
+
+/**
+ * Temporary functionality for retrieving rewards TODO: remove later
+ */
+const getRewardsFromYoroi = async (stakeAddress: string) => {
+  const url = 'https://iohk-mainnet.yoroiwallet.com/api/getAccountState'
+  const response = await post(url,
+    JSON.stringify({ addresses: [stakeAddress] }),
+    { headers: { 'Content-Type': 'application/json' } },
+  ).catch(() => 0)
+  if (!response || !response.data || !response.data[stakeAddress]
+    || !response.data[stakeAddress].remainingAmount) {
+    return 0
   }
+  return parseInt(response.data[stakeAddress].remainingAmount, 10)
 }
 
 /**
@@ -305,24 +370,66 @@ const nextRewardInfo = async (dbApi: DbApi, accountDbId: number, currentEpoch: n
  */
 const accountInfo = (dbApi: DbApi, { logger }: ServerConfig) => async (req: any) => {
   logger.debug('[accountInfo] query started')
-  const { account } = req.params
-  const accountDbIdResult = await dbApi.stakeAddressId(wrapHashPrefix(account))
-  const accountDbId = accountDbIdResult.length > 0 ? accountDbIdResult[0].accountDbId : undefined
+  const { stakeAddress } = req.params
+  const accountDbId = await getStakeAddrDbId(dbApi, stakeAddress)
   const delegation = accountDbId ? await poolInfoForAccountId(dbApi, accountDbId) : {}
   const hasStakingKey = accountDbId ? await dbApi.hasActiveStakingKey(accountDbId) : false
-  const rewards = accountDbId ? await dbApi.rewardsForAccountDbId(accountDbId) : 0
+  // const rewards = accountDbId ? await dbApi.rewardsForAccountDbId(accountDbId) : 0
+  const yoroiRewards = await getRewardsFromYoroi(stakeAddress) // TODO: revert
   const currentEpoch = await dbApi.currentEpoch()
   const nextRewardDetails = accountDbId
     ? await nextRewardInfo(dbApi, accountDbId, currentEpoch)
-    : {}
+    : getEmptyRewardsArray(currentEpoch)
   logger.debug('[accountInfo] query finished')
   return {
     currentEpoch,
     delegation,
     hasStakingKey,
-    rewards,
+    rewards: yoroiRewards,
     nextRewardDetails,
   }
+}
+
+/**
+ * Returns complete delegation history for a stake address
+ * @param {*} db Database
+ * @param {*} Server Server Config Object
+ */
+const delegationHistory = (dbApi: DbApi, { logger }: ServerConfig) => async (req: any) => {
+  logger.debug('[delegationHistory] query started')
+  const { stakeAddress } = req.params
+  const accountDbId = await getStakeAddrDbId(dbApi, stakeAddress)
+  const delegations = accountDbId ? await dbApi.delegationHistory(accountDbId) : []
+  logger.debug('[delegationHistory] query finished')
+  return delegations
+}
+
+/**
+ * Returns complete withdrawal history for a stake address
+ * @param {*} db Database
+ * @param {*} Server Server Config Object
+ */
+const withdrawalHistory = (dbApi: DbApi, { logger }: ServerConfig) => async (req: any) => {
+  logger.debug('[withdrawalHistory] query started')
+  const { stakeAddress } = req.params
+  const accountDbId = await getStakeAddrDbId(dbApi, stakeAddress)
+  const withdrawals = accountDbId ? await dbApi.withdrawalHistory(accountDbId) : []
+  logger.debug('[withdrawalHistory] query finished')
+  return withdrawals
+}
+
+/**
+ * Returns complete stake registration history for a stake address
+ * @param {*} db Database
+ * @param {*} Server Server Config Object
+ */
+const stakeRegistrationHistory = (dbApi: DbApi, { logger }: ServerConfig) => async (req: any) => {
+  logger.debug('[stakeRegistrationHistory] query started')
+  const { stakeAddress } = req.params
+  const accountDbId = await getStakeAddrDbId(dbApi, stakeAddress)
+  const registrations = accountDbId ? await dbApi.stakeRegistrationHistory(accountDbId) : []
+  logger.debug('[stakeRegistrationHistory] query finished')
+  return registrations
 }
 
 export default {
@@ -363,7 +470,22 @@ export default {
   },
   accountInfo: {
     method: 'get',
-    path: withPrefix('/account/info/:account'),
+    path: withPrefix('/account/info/:stakeAddress'),
     handler: accountInfo,
+  },
+  delegationHistory: {
+    method: 'get',
+    path: withPrefix('/account/delegationHistory/:stakeAddress'),
+    handler: delegationHistory,
+  },
+  withdrawalHistory: {
+    method: 'get',
+    path: withPrefix('/account/withdrawalHistory/:stakeAddress'),
+    handler: withdrawalHistory,
+  },
+  stakeRegistrationHistory: {
+    method: 'get',
+    path: withPrefix('/account/stakeRegistrationHistory/:stakeAddress'),
+    handler: stakeRegistrationHistory,
   },
 }
