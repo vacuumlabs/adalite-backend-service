@@ -299,15 +299,25 @@ const nextRewardInfo = async (dbApi: DbApi, accountDbId: number, currentEpoch: n
 }
 
 /**
+ * Helper for getting account database id for a staking address
+ * @param {*} db Database
+ * @param {string} stakeAddress Server Config Object
+ */
+const getStakeAddrDbId = async (dbApi: DbApi, stakeAddress: string) => {
+  const stakeAddrDbIdResult = await dbApi.stakeAddressId(wrapHashPrefix(stakeAddress))
+  return stakeAddrDbIdResult.length > 0
+    ? stakeAddrDbIdResult[0].accountDbId : undefined
+}
+
+/**
  * Returns delegation, rewards and stake key registration for a given account
  * @param {*} db Database
  * @param {*} Server Server Config Object
  */
 const accountInfo = (dbApi: DbApi, { logger }: ServerConfig) => async (req: any) => {
   logger.debug('[accountInfo] query started')
-  const { account } = req.params
-  const accountDbIdResult = await dbApi.stakeAddressId(wrapHashPrefix(account))
-  const accountDbId = accountDbIdResult.length > 0 ? accountDbIdResult[0].accountDbId : undefined
+  const { stakeAddress } = req.params
+  const accountDbId = await getStakeAddrDbId(dbApi, stakeAddress)
   const delegation = accountDbId ? await poolInfoForAccountId(dbApi, accountDbId) : {}
   const hasStakingKey = accountDbId ? await dbApi.hasActiveStakingKey(accountDbId) : false
   const rewards = accountDbId ? await dbApi.rewardsForAccountDbId(accountDbId) : 0
@@ -323,6 +333,34 @@ const accountInfo = (dbApi: DbApi, { logger }: ServerConfig) => async (req: any)
     rewards,
     nextRewardDetails,
   }
+}
+
+/**
+ * Returns complete delegation history for a stake address
+ * @param {*} db Database
+ * @param {*} Server Server Config Object
+ */
+const delegationHistory = (dbApi: DbApi, { logger }: ServerConfig) => async (req: any) => {
+  logger.debug('[delegationHistory] query started')
+  const { stakeAddress } = req.params
+  const accountDbId = await getStakeAddrDbId(dbApi, stakeAddress)
+  const delegations = accountDbId ? await dbApi.delegationHistory(accountDbId) : []
+  logger.debug('[delegationHistory] query finished')
+  return delegations
+}
+
+/**
+ * Returns complete withdrawal history for a stake address
+ * @param {*} db Database
+ * @param {*} Server Server Config Object
+ */
+const withdrawalHistory = (dbApi: DbApi, { logger }: ServerConfig) => async (req: any) => {
+  logger.debug('[withdrawalHistory] query started')
+  const { stakeAddress } = req.params
+  const accountDbId = await getStakeAddrDbId(dbApi, stakeAddress)
+  const withdrawals = accountDbId ? await dbApi.withdrawalHistory(accountDbId) : []
+  logger.debug('[withdrawalHistory] query finished')
+  return withdrawals
 }
 
 export default {
@@ -363,7 +401,17 @@ export default {
   },
   accountInfo: {
     method: 'get',
-    path: withPrefix('/account/info/:account'),
+    path: withPrefix('/account/info/:stakeAddress'),
     handler: accountInfo,
+  },
+  delegationHistory: {
+    method: 'get',
+    path: withPrefix('/account/delegationHistory/:stakeAddress'),
+    handler: delegationHistory,
+  },
+  withdrawalHistory: {
+    method: 'get',
+    path: withPrefix('/account/withdrawalHistory/:stakeAddress'),
+    handler: withdrawalHistory,
   },
 }
