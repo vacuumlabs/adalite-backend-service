@@ -316,9 +316,9 @@ const poolDelegatedTo = (db: Pool) => async (accountDbId: number)
 : Promise<TypedResultSet<PoolDelegatedToDbResult>> =>
   (db.query({
     text: `SELECT
-      d.pool_id AS "poolHashDbId", pr.retiring_epoch AS "retiringEpoch" FROM delegation AS d
+      d.pool_hash_id AS "poolHashDbId", pr.retiring_epoch AS "retiringEpoch" FROM delegation AS d
       LEFT JOIN tx ON d.tx_id=tx.id
-      LEFT JOIN pool_retire pr on pr.hash_id=d.pool_id
+      LEFT JOIN pool_retire pr on pr.hash_id=d.pool_hash_id
       WHERE d.addr_id=$1
       ORDER BY tx.block DESC
       LIMIT 1`,
@@ -373,7 +373,7 @@ const rewardsForAccountDbId = (db: Pool) => async (accountDbId: number): Promise
 const epochDelegations = (db: Pool) => async (accountDbId: number)
 : Promise<TypedResultSet<EpochDelegationsDbResult>> =>
   (db.query({
-    text: `SELECT DISTINCT ON (block.epoch_no) block.epoch_no as "epochNo", d.pool_id as "poolHashDbId"
+    text: `SELECT DISTINCT ON (block.epoch_no) block.epoch_no as "epochNo", d.pool_hash_id as "poolHashDbId"
       FROM delegation d
       LEFT JOIN tx ON tx.id=d.tx_id
       LEFT JOIN block ON tx.block=block.id
@@ -405,7 +405,7 @@ const delegationHistory = (db: Pool) => async (accountDbId: number)
       FROM delegation d
       LEFT JOIN tx ON tx.id=d.tx_id
       LEFT JOIN block ON tx.block=block.id
-      LEFT JOIN pool_hash ph ON d.pool_id=ph.id
+      LEFT JOIN pool_hash ph ON d.pool_hash_id=ph.id
       WHERE d.addr_id=$1
       ORDER BY block.slot_no DESC`,
     values: [accountDbId],
