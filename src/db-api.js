@@ -23,6 +23,7 @@ import type {
   DelegationHistoryDbResult,
   WithdrawalHistoryDbResult,
   StakeRegistrationHistoryDbResult,
+  RewardHistoryDbResult,
 } from 'icarus-backend'; // eslint-disable-line
 
 // helper function to avoid destructuring ".rows" in the codebase
@@ -354,14 +355,23 @@ const hasActiveStakingKey = (db: Pool) => async (accountDbId: number): Promise<b
 }
 
 const rewardsForAccountDbId = (db: Pool) => async (accountDbId: number): Promise<number> => {
-  const rewardResult = await db.query(`
-    SELECT COALESCE(sum(amount), 0) as amount from (
-      SELECT amount FROM reward WHERE addr_id=${accountDbId}
-      UNION
-      SELECT r.amount FROM reserve r WHERE addr_id=${accountDbId}
-      AND NOT EXISTS (SELECT FROM withdrawal w WHERE w.addr_id=r.addr_id and w.amount=r.amount)
-    ) as rewards`)
-  return rewardResult.rows.length > 0 ? parseInt(rewardResult.rows[0].amount, 10) : 0
+  const rewardResult = await db.query({
+    text: `
+      SELECT 
+        (SELECT COALESCE(SUM(rewards.amount), 0) FROM 
+          (
+            SELECT amount FROM reward WHERE addr_id=$1
+            UNION ALL
+            SELECT amount FROM reserve WHERE addr_id=$1
+          ) rewards
+        ) - (
+          SELECT COALESCE(SUM(amount), 0) FROM withdrawal WHERE addr_id=$1
+        )
+      AS "remainingRewards"
+    `,
+    values: [accountDbId],
+  })
+  return rewardResult.rows.length > 0 ? parseInt(rewardResult.rows[0].remainingRewards, 10) : 0
 }
 
 /**
@@ -462,7 +472,7 @@ const stakeRegistrationHistory = (db: Pool) => async (accountDbId: number)
  * @param {number} accountDbId
  */
 const rewardHistory = (db: Pool) => async (accountDbId: number)
-: Promise<TypedResultSet<any>> =>
+: Promise<TypedResultSet<RewardHistoryDbResult>> =>
   (db.query({
     text: `SELECT r.epoch_no::INTEGER as "forDelegationInEpoch", block.epoch_no as "epochNo",
         block.time, r.amount, RIGHT(ph.hash_raw::text, -2) as "poolHash"
