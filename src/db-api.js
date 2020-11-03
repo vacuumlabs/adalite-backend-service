@@ -50,7 +50,7 @@ const filterUsedAddresses = (db: Pool) => async (
 
 const utxoQuery = `SELECT 
   TRIM(LEADING '\\x' from tx.hash::text) AS "tx_hash", tx_out.index AS "tx_index",
-  tx_out.address AS "receiver", tx_out.value AS "amount", tx.block::INTEGER as "block_num"
+  tx_out.address AS "receiver", tx_out.value AS "amount", tx.block_id::INTEGER as "block_num"
 FROM tx
 INNER JOIN tx_out ON tx.id = tx_out.tx_id
 WHERE NOT EXISTS (SELECT true
@@ -80,7 +80,7 @@ const txHistoryQuery = (limit: number) => `
       SELECT                                                                                                              
         tx.id, tx.hash::text, block.block_no, block.hash::text as blockHash, block.time, tx.block_index                
         FROM block                                                                                                        
-        INNER JOIN tx ON block.id = tx.block                                                                              
+        INNER JOIN tx ON block.id = tx.block_id                                                                              
         INNER JOIN tx_out ON tx.id = tx_out.tx_id                                                                
         WHERE tx_out.address = ANY($1)                                                                                    
           AND block.time >= $2                                                                                  
@@ -88,7 +88,7 @@ const txHistoryQuery = (limit: number) => `
       SELECT DISTINCT                                                                                                     
         tx.id, tx.hash::text, block.block_no, block.hash::text as blockHash, block.time, tx.block_index            
         FROM block                                                                                                        
-        INNER JOIN tx ON block.id = tx.block                                                                              
+        INNER JOIN tx ON block.id = tx.block_id                                                                              
         INNER JOIN tx_in ON tx.id = tx_in.tx_in_id                                                                        
         INNER JOIN tx_out ON (tx_in.tx_out_id = tx_out.tx_id) AND (tx_in.tx_out_index = tx_out.index)             
         WHERE tx_out.address = ANY($1)                                                                                                                                                                       
@@ -122,7 +122,7 @@ const transactionsHistoryForAddresses = (db: Pool) => async (
 const getTx = (db: Pool) => async (txHash: string)
 : Promise<TypedResultSet<GetTxDbResult>> =>
   (db.query({
-    text: 'SELECT id as "dbId", block as "blockId", hash::text FROM "tx" WHERE hash = $1',
+    text: 'SELECT id as "dbId", block_id as "blockId", hash::text FROM "tx" WHERE hash = $1',
     values: [txHash],
   }): any)
 
@@ -178,14 +178,14 @@ const getTransactions = (db: Pool) => async (addresses: Array<string>)
     text: `SELECT DISTINCT
       tx.id as "dbId", tx.hash::text, block.time, tx.fee
       FROM block 
-      INNER JOIN tx ON block.id = tx.block 
+      INNER JOIN tx ON block.id = tx.block_id 
       INNER JOIN tx_out ON tx.id = tx_out.tx_id
       WHERE tx_out.address = ANY($1)
     UNION
     SELECT DISTINCT 
       tx.id as "dbId", tx.hash::text, block.time, tx.fee
       FROM block 
-      INNER JOIN tx ON block.id = tx.block 
+      INNER JOIN tx ON block.id = tx.block_id 
       INNER JOIN tx_in ON tx.id = tx_in.tx_in_id 
       INNER JOIN tx_out ON (tx_in.tx_out_id = tx_out.tx_id) AND (tx_in.tx_out_index = tx_out.index)
       WHERE tx_out.address = ANY($1)`,
@@ -279,13 +279,13 @@ const retiredPoolsIdsQuery = `SELECT hash_id FROM pool_retire pr
 const stakePoolsQuery = (hideRetiredPools: boolean, poolHashDbId?: number) => `SELECT 
   sp."poolHash", sp.pledge, sp.margin, sp."fixedCost", sp.url FROM
     (SELECT 
-      DISTINCT ON (ph.hash) RIGHT(ph.hash::text, -2) as "poolHash", p.pledge, p.margin,
+      DISTINCT ON (ph.hash_raw) RIGHT(ph.hash_raw::text, -2) as "poolHash", p.pledge, p.margin,
         p.fixed_cost as "fixedCost", pmd.url, ph.id as pool_hash_id
       FROM pool_update AS p
-      LEFT JOIN pool_meta_data AS pmd ON p.meta=pmd.id
+      LEFT JOIN pool_meta_data AS pmd ON p.meta_id=pmd.id
       LEFT JOIN pool_hash AS ph ON p.hash_id=ph.id
       ${poolHashDbId ? `WHERE ph.id=${poolHashDbId}` : ''}
-      ORDER BY ph.hash, p.registered_tx_id DESC
+      ORDER BY ph.hash_raw, p.registered_tx_id DESC
     ) sp
   ${hideRetiredPools ? `WHERE sp.pool_hash_id NOT IN (${retiredPoolsIdsQuery})` : ''}
 `
@@ -320,7 +320,7 @@ const poolDelegatedTo = (db: Pool) => async (accountDbId: number)
       LEFT JOIN tx ON d.tx_id=tx.id
       LEFT JOIN pool_retire pr on pr.hash_id=d.pool_hash_id
       WHERE d.addr_id=$1
-      ORDER BY tx.block DESC
+      ORDER BY tx.block_id DESC
       LIMIT 1`,
     values: [accountDbId],
   }): any)
@@ -330,10 +330,10 @@ const poolDelegatedTo = (db: Pool) => async (accountDbId: number)
  * @param {string} dbTable - "stake_registration" or "stake_deregistration" table
  */
 const newestStakingKeyBlockForDb = (dbTable: string) => `SELECT
-  tx.block from tx
+  tx.block_id as "blockId" from tx
   LEFT JOIN ${dbTable} ON tx.id=${dbTable}.tx_id
   WHERE ${dbTable}.addr_id=$1
-  ORDER BY tx.block DESC
+  ORDER BY tx.block_id DESC
   LIMIT 1
 `
 
@@ -347,9 +347,9 @@ const hasActiveStakingKey = (db: Pool) => async (accountDbId: number): Promise<b
     values: [accountDbId],
   })
   const latestRegistrationBlock = registrationBlockResult.rows.length
-    ? parseInt(registrationBlockResult.rows[0].block, 10) : -1
+    ? parseInt(registrationBlockResult.rows[0].blockId, 10) : -1
   const latestDeregistrationBlock = deregistrationBlockResult.rows.length
-    ? parseInt(deregistrationBlockResult.rows[0].block, 10) : -1
+    ? parseInt(deregistrationBlockResult.rows[0].blockId, 10) : -1
   return latestRegistrationBlock > latestDeregistrationBlock
 }
 
@@ -376,7 +376,7 @@ const epochDelegations = (db: Pool) => async (accountDbId: number)
     text: `SELECT DISTINCT ON (block.epoch_no) block.epoch_no as "epochNo", d.pool_hash_id as "poolHashDbId"
       FROM delegation d
       LEFT JOIN tx ON tx.id=d.tx_id
-      LEFT JOIN block ON tx.block=block.id
+      LEFT JOIN block ON tx.block_id=block.id
       WHERE d.addr_id=$1
       ORDER BY block.epoch_no DESC, block.slot_no DESC
       LIMIT 4`, // we don't need more than 4 latest epochs
@@ -401,10 +401,10 @@ const delegationHistory = (db: Pool) => async (accountDbId: number)
 : Promise<TypedResultSet<DelegationHistoryDbResult>> =>
   (db.query({
     text: `SELECT block.epoch_no as "epochNo", block.time,
-        RIGHT(ph.hash::text, -2) as "poolHash", RIGHT(tx.hash::text, -2) as "txHash"
+        RIGHT(ph.hash_raw::text, -2) as "poolHash", RIGHT(tx.hash::text, -2) as "txHash"
       FROM delegation d
       LEFT JOIN tx ON tx.id=d.tx_id
-      LEFT JOIN block ON tx.block=block.id
+      LEFT JOIN block ON tx.block_id=block.id
       LEFT JOIN pool_hash ph ON d.pool_hash_id=ph.id
       WHERE d.addr_id=$1
       ORDER BY block.slot_no DESC`,
@@ -423,7 +423,7 @@ const withdrawalHistory = (db: Pool) => async (accountDbId: number)
         RIGHT(tx.hash::text, -2) as "txHash"
       FROM withdrawal w
       LEFT JOIN tx ON tx.id=w.tx_id
-      LEFT JOIN block ON tx.block=block.id
+      LEFT JOIN block ON tx.block_id=block.id
       WHERE w.addr_id=$1
       ORDER BY block.slot_no DESC`,
     values: [accountDbId],
@@ -443,14 +443,14 @@ const stakeRegistrationHistory = (db: Pool) => async (accountDbId: number)
           RIGHT(tx.hash::text, -2) as "txHash"
         FROM stake_registration sr
         LEFT JOIN tx ON tx.id=sr.tx_id
-        LEFT JOIN block ON tx.block=block.id
+        LEFT JOIN block ON tx.block_id=block.id
         WHERE sr.addr_id=$1
       UNION
       SELECT block.epoch_no as "epochNo", block.time, 'deregistration' as "action", block.slot_no,
           RIGHT(tx.hash::text, -2) as "txHash"
         FROM stake_deregistration sdr
         LEFT JOIN tx ON tx.id=sdr.tx_id
-        LEFT JOIN block ON tx.block=block.id
+        LEFT JOIN block ON tx.block_id=block.id
         WHERE sdr.addr_id=$1) res
     ORDER BY res.slot_no DESC`,
     values: [accountDbId],
