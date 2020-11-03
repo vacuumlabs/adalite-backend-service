@@ -70,6 +70,7 @@ declare module 'icarus-backend' {
     currentEpoch: () => Promise<number>,
     delegationHistory: (accountDbId: number) => Promise<Array<DelegationHistoryDbResult>>,
     withdrawalHistory: (accountDbId: number) => Promise<Array<WithdrawalHistoryDbResult>>,
+    rewardHistory: (accountDbId: number) => Promise<Array<RewardHistoryDbResult>>,
     stakeRegistrationHistory: (accountDbId: number) =>
       Promise<Array<StakeRegistrationHistoryDbResult>>,
   };
@@ -230,6 +231,14 @@ declare module 'icarus-backend' {
     time: Date,
     amount: number,
     txHash: string,
+  }
+
+  declare type RewardHistoryDbResult = {
+    forDelegationInEpoch: number,
+    epochNo: number,
+    time: Date,
+    amount: number,
+    poolHash: string,
   }
 
   declare type StakeRegistrationHistoryDbResult = {

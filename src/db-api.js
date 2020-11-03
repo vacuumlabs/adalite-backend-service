@@ -456,6 +456,24 @@ const stakeRegistrationHistory = (db: Pool) => async (accountDbId: number)
     values: [accountDbId],
   }): any)
 
+/**
+ * Gets complete reward history for a stake address db id
+ * @param {Db Object} db
+ * @param {number} accountDbId
+ */
+const rewardHistory = (db: Pool) => async (accountDbId: number)
+: Promise<TypedResultSet<any>> =>
+  (db.query({
+    text: `SELECT r.epoch_no::INTEGER as "forDelegationInEpoch", block.epoch_no as "epochNo",
+        block.time, r.amount, RIGHT(ph.hash_raw::text, -2) as "poolHash"
+      FROM reward r
+      LEFT JOIN block ON r.block_id=block.id
+      LEFT JOIN pool_hash ph ON r.pool_id=ph.id
+      WHERE r.addr_id=$1
+      ORDER BY block.slot_no DESC`,
+    values: [accountDbId],
+  }): any)
+
 export default (db: Pool): DbApi => ({
   filterUsedAddresses: extractRows(filterUsedAddresses(db)),
   utxoForAddresses: extractRows(utxoForAddresses(db)),
@@ -483,4 +501,5 @@ export default (db: Pool): DbApi => ({
   delegationHistory: extractRows(delegationHistory(db)),
   withdrawalHistory: extractRows(withdrawalHistory(db)),
   stakeRegistrationHistory: extractRows(stakeRegistrationHistory(db)),
+  rewardHistory: extractRows(rewardHistory(db)),
 })

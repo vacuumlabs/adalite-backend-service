@@ -419,6 +419,20 @@ const withdrawalHistory = (dbApi: DbApi, { logger }: ServerConfig) => async (req
 }
 
 /**
+ * Returns complete reward history for a stake address
+ * @param {*} db Database
+ * @param {*} Server Server Config Object
+ */
+const rewardHistory = (dbApi: DbApi, { logger }: ServerConfig) => async (req: any) => {
+  logger.debug('[rewardHistory] query started')
+  const { stakeAddress } = req.params
+  const accountDbId = await getStakeAddrDbId(dbApi, stakeAddress)
+  const rewards = accountDbId ? await dbApi.rewardHistory(accountDbId) : []
+  logger.debug('[rewardHistory] query finished')
+  return rewards
+}
+
+/**
  * Returns complete stake registration history for a stake address
  * @param {*} db Database
  * @param {*} Server Server Config Object
@@ -482,6 +496,11 @@ export default {
     method: 'get',
     path: withPrefix('/account/withdrawalHistory/:stakeAddress'),
     handler: withdrawalHistory,
+  },
+  rewardHistory: {
+    method: 'get',
+    path: withPrefix('/account/rewardHistory/:stakeAddress'),
+    handler: rewardHistory,
   },
   stakeRegistrationHistory: {
     method: 'get',
