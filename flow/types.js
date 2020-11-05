@@ -65,7 +65,7 @@ declare module 'icarus-backend' {
     singleStakePoolInfo: (poolDbId: number) => Promise<Array<StakePool>>,
     poolDelegatedTo: (accountDbId: number) => Promise<Array<PoolDelegatedToDbResult>>,
     hasActiveStakingKey: (accountDbId: number) => Promise<boolean>,
-    rewardsForAccountDbId: (accountDbId: number) => Promise<number>,
+    rewardsForAccountDbId: (accountDbId: number) => Promise<string>,
     epochDelegations: (accountDbId: number) => Promise<Array<EpochDelegationsDbResult>>,
     currentEpoch: () => Promise<number>,
     delegationHistory: (accountDbId: number) => Promise<Array<DelegationHistoryDbResult>>,
@@ -229,7 +229,7 @@ declare module 'icarus-backend' {
   declare type WithdrawalHistoryDbResult = {
     epochNo: number,
     time: Date,
-    amount: number,
+    amount: string,
     txHash: string,
   }
 
@@ -237,7 +237,7 @@ declare module 'icarus-backend' {
     forDelegationInEpoch: number,
     epochNo: number,
     time: Date,
-    amount: number,
+    amount: string,
     poolHash: string,
   }
 

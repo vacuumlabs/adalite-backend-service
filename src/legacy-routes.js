@@ -357,7 +357,7 @@ const accountInfo = (dbApi: DbApi, { logger }: ServerConfig) => async (req: any)
   const accountDbId = await getStakeAddrDbId(dbApi, stakeAddress)
   const delegation = accountDbId ? await poolInfoForAccountId(dbApi, accountDbId) : {}
   const hasStakingKey = accountDbId ? await dbApi.hasActiveStakingKey(accountDbId) : false
-  const rewards = accountDbId ? await dbApi.rewardsForAccountDbId(accountDbId) : 0
+  const rewards = accountDbId ? await dbApi.rewardsForAccountDbId(accountDbId) : '0'
   const currentEpoch = await dbApi.currentEpoch()
   const nextRewardDetails = accountDbId
     ? await nextRewardInfo(dbApi, accountDbId, currentEpoch)

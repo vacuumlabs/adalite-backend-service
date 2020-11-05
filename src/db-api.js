@@ -354,7 +354,7 @@ const hasActiveStakingKey = (db: Pool) => async (accountDbId: number): Promise<b
   return latestRegistrationBlock > latestDeregistrationBlock
 }
 
-const rewardsForAccountDbId = (db: Pool) => async (accountDbId: number): Promise<number> => {
+const rewardsForAccountDbId = (db: Pool) => async (accountDbId: number): Promise<string> => {
   const rewardResult = await db.query({
     text: `
       SELECT 
@@ -371,7 +371,7 @@ const rewardsForAccountDbId = (db: Pool) => async (accountDbId: number): Promise
     `,
     values: [accountDbId],
   })
-  return rewardResult.rows.length > 0 ? parseInt(rewardResult.rows[0].remainingRewards, 10) : 0
+  return rewardResult.rows.length > 0 ? `${parseInt(rewardResult.rows[0].remainingRewards, 10)}` : '0'
 }
 
 /**
