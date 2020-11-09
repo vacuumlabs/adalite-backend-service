@@ -409,7 +409,9 @@ const rewardHistory = (dbApi: DbApi, { logger }: ServerConfig) => async (req: an
   logger.debug('[rewardHistory] query started')
   const { stakeAddress } = req.params
   const accountDbId = await getStakeAddrDbId(dbApi, stakeAddress)
-  const rewards = accountDbId ? await dbApi.rewardHistory(accountDbId) : []
+  const rewards = accountDbId ? await dbApi.mainnetRewardHistory(accountDbId) : []
+  const itnReward = accountDbId ? await dbApi.itnReward(accountDbId) : null
+  if (itnReward !== null) { rewards.push(itnReward) }
   logger.debug('[rewardHistory] query finished')
   return rewards
 }

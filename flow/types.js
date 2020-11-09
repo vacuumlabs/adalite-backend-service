@@ -70,7 +70,8 @@ declare module 'icarus-backend' {
     currentEpoch: () => Promise<number>,
     delegationHistory: (accountDbId: number) => Promise<Array<DelegationHistoryDbResult>>,
     withdrawalHistory: (accountDbId: number) => Promise<Array<WithdrawalHistoryDbResult>>,
-    rewardHistory: (accountDbId: number) => Promise<Array<RewardHistoryDbResult>>,
+    mainnetRewardHistory: (accountDbId: number) => Promise<Array<RewardHistoryDbResult>>,
+    itnReward: (accountDbId: number) => Promise<RewardHistoryDbResult | null>,
     stakeRegistrationHistory: (accountDbId: number) =>
       Promise<Array<StakeRegistrationHistoryDbResult>>,
   };

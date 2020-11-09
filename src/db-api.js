@@ -467,11 +467,11 @@ const stakeRegistrationHistory = (db: Pool) => async (accountDbId: number)
   }): any)
 
 /**
- * Gets complete reward history for a stake address db id
+ * Gets complete mainnet reward history for a stake address db id
  * @param {Db Object} db
  * @param {number} accountDbId
  */
-const rewardHistory = (db: Pool) => async (accountDbId: number)
+const mainnetRewardHistory = (db: Pool) => async (accountDbId: number)
 : Promise<TypedResultSet<RewardHistoryDbResult>> =>
   (db.query({
     text: `SELECT r.epoch_no::INTEGER as "forDelegationInEpoch", block.epoch_no as "epochNo",
@@ -483,6 +483,29 @@ const rewardHistory = (db: Pool) => async (accountDbId: number)
       ORDER BY block.slot_no DESC`,
     values: [accountDbId],
   }): any)
+
+/**
+ * Gets the itn reward entry for stake address db id if it exists
+ * @param {Db Object} db
+ * @param {number} accountDbId
+ */
+const itnReward = (db: Pool) => async (accountDbId: number)
+: Promise<RewardHistoryDbResult | null> => {
+  const rewardDbResult = await (db.query({
+    text: `SELECT block.epoch_no as "epochNo", block.time, r.amount
+      FROM reserve r
+      LEFT JOIN tx on r.tx_id=tx.id
+      LEFT JOIN block on tx.block_id=block.id
+      WHERE r.addr_id=$1`,
+    values: [accountDbId],
+  }): any)
+
+  return rewardDbResult.rows.length > 0 ? {
+    ...rewardDbResult.rows[0],
+    forDelegationInEpoch: null,
+    poolHash: null,
+  } : null
+}
 
 export default (db: Pool): DbApi => ({
   filterUsedAddresses: extractRows(filterUsedAddresses(db)),
@@ -511,5 +534,6 @@ export default (db: Pool): DbApi => ({
   delegationHistory: extractRows(delegationHistory(db)),
   withdrawalHistory: extractRows(withdrawalHistory(db)),
   stakeRegistrationHistory: extractRows(stakeRegistrationHistory(db)),
-  rewardHistory: extractRows(rewardHistory(db)),
+  mainnetRewardHistory: extractRows(mainnetRewardHistory(db)),
+  itnReward: itnReward(db),
 })
