@@ -3,7 +3,6 @@
 // import { isValidAddress } from 'cardano-crypto.js'
 import moment from 'moment'
 import Big from 'big.js'
-import { post } from 'axios'
 
 import type {
   ServerConfig,
@@ -348,22 +347,6 @@ const getStakeAddrDbId = async (dbApi: DbApi, stakeAddress: string) => {
 }
 
 /**
- * Temporary functionality for retrieving rewards TODO: remove later
- */
-const getRewardsFromYoroi = async (stakeAddress: string) => {
-  const url = 'https://iohk-mainnet.yoroiwallet.com/api/getAccountState'
-  const response = await post(url,
-    JSON.stringify({ addresses: [stakeAddress] }),
-    { headers: { 'Content-Type': 'application/json' } },
-  ).catch(() => 0)
-  if (!response || !response.data || !response.data[stakeAddress]
-    || !response.data[stakeAddress].remainingAmount) {
-    return 0
-  }
-  return parseInt(response.data[stakeAddress].remainingAmount, 10)
-}
-
-/**
  * Returns delegation, rewards and stake key registration for a given account
  * @param {*} db Database
  * @param {*} Server Server Config Object
@@ -374,8 +357,7 @@ const accountInfo = (dbApi: DbApi, { logger }: ServerConfig) => async (req: any)
   const accountDbId = await getStakeAddrDbId(dbApi, stakeAddress)
   const delegation = accountDbId ? await poolInfoForAccountId(dbApi, accountDbId) : {}
   const hasStakingKey = accountDbId ? await dbApi.hasActiveStakingKey(accountDbId) : false
-  // const rewards = accountDbId ? await dbApi.rewardsForAccountDbId(accountDbId) : 0
-  const yoroiRewards = await getRewardsFromYoroi(stakeAddress) // TODO: revert
+  const rewards = accountDbId ? await dbApi.rewardsForAccountDbId(accountDbId) : '0'
   const currentEpoch = await dbApi.currentEpoch()
   const nextRewardDetails = accountDbId
     ? await nextRewardInfo(dbApi, accountDbId, currentEpoch)
@@ -385,7 +367,7 @@ const accountInfo = (dbApi: DbApi, { logger }: ServerConfig) => async (req: any)
     currentEpoch,
     delegation,
     hasStakingKey,
-    rewards: yoroiRewards,
+    rewards,
     nextRewardDetails,
   }
 }
@@ -416,6 +398,22 @@ const withdrawalHistory = (dbApi: DbApi, { logger }: ServerConfig) => async (req
   const withdrawals = accountDbId ? await dbApi.withdrawalHistory(accountDbId) : []
   logger.debug('[withdrawalHistory] query finished')
   return withdrawals
+}
+
+/**
+ * Returns complete reward history for a stake address
+ * @param {*} db Database
+ * @param {*} Server Server Config Object
+ */
+const rewardHistory = (dbApi: DbApi, { logger }: ServerConfig) => async (req: any) => {
+  logger.debug('[rewardHistory] query started')
+  const { stakeAddress } = req.params
+  const accountDbId = await getStakeAddrDbId(dbApi, stakeAddress)
+  const rewards = accountDbId ? await dbApi.mainnetRewardHistory(accountDbId) : []
+  const itnReward = accountDbId ? await dbApi.itnReward(accountDbId) : null
+  if (itnReward !== null) { rewards.push(itnReward) }
+  logger.debug('[rewardHistory] query finished')
+  return rewards
 }
 
 /**
@@ -482,6 +480,11 @@ export default {
     method: 'get',
     path: withPrefix('/account/withdrawalHistory/:stakeAddress'),
     handler: withdrawalHistory,
+  },
+  rewardHistory: {
+    method: 'get',
+    path: withPrefix('/account/rewardHistory/:stakeAddress'),
+    handler: rewardHistory,
   },
   stakeRegistrationHistory: {
     method: 'get',
