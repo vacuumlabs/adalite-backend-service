@@ -14,7 +14,6 @@ services:
         ./wait-for-it.sh cardano-submit-api:8090 -t 3600 -- /bin/sh -c "yarn start >> /var/log/app/server.log 2>&1"
     volumes:
       - ${DATA_PATH}/adalite-backend:/var/log/app
-      - ${DATA_PATH}/shared_volume:/var/shared_volume
       - ./:/docker-dir
       - ${DATA_PATH}/configs:/configs
     environment:
@@ -85,7 +84,7 @@ services:
       - postgres
     volumes:
       - ${DATA_PATH}/node-ipc:/node-ipc
-      - ${DATA_PATH}/db-sync-tmp:/tmp
+      - ${DATA_PATH}/db-sync-data:/var/lib/cdbsync
     restart: unless-stopped
 
   cardano-submit-api:
@@ -102,6 +101,7 @@ services:
     restart: on-failure
 
 volumes:
+  db-sync-data:
   postgres:
   node-db:
   node-ipc:
