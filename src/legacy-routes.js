@@ -3,6 +3,7 @@
 // import { isValidAddress } from 'cardano-crypto.js'
 import moment from 'moment'
 import Big from 'big.js'
+import { BadRequestError } from 'restify-errors'
 
 import type {
   ServerConfig,
@@ -16,6 +17,7 @@ import type {
 } from 'icarus-backend'; // eslint-disable-line
 import { _ } from 'lodash'
 import { wrapHashPrefix, unwrapHashPrefix, groupInputsOutputs } from './helpers'
+import getSuitablePool from './poolRecommendation'
 
 const isValidAddress = (address) => true // eslint-disable-line no-unused-vars
 const withPrefix = route => `/api${route}`
@@ -430,6 +432,22 @@ const stakeRegistrationHistory = (dbApi: DbApi, { logger }: ServerConfig) => asy
   return registrations
 }
 
+const poolRecommendation = (dbApi: DbApi, { logger }: ServerConfig) => async (req: any) => {
+  logger.debug('[poolRecommendation] query started')
+  const { poolHash, stake } = req.params
+  let stakeInt: number = 0
+  try {
+    stakeInt = parseInt(stake, 10)
+  } catch (err) {
+    logger.error('[poolRecommendation] Invalid arguments')
+    throw new BadRequestError('Staking amount must be a valid lovelace number')
+  }
+  const recommendedPool = getSuitablePool(poolHash, stakeInt)
+  logger.debug('[poolRecommendation] query finished')
+  return recommendedPool
+}
+
+
 export default {
   addressSummary: {
     method: 'get',
@@ -490,5 +508,10 @@ export default {
     method: 'get',
     path: withPrefix('/account/stakeRegistrationHistory/:stakeAddress'),
     handler: stakeRegistrationHistory,
+  },
+  poolRecommendation: {
+    method: 'get',
+    path: withPrefix('/account/poolRecommendation/poolHash/:poolHash/stake/:stake'),
+    handler: poolRecommendation,
   },
 }

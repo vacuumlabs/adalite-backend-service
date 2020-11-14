@@ -13,6 +13,7 @@ import createDB from './db'
 import configCleanup from './cleanup'
 import { healthcheckLoop } from './healthcheck'
 import responseGuard from './middleware/response-guard'
+import { poolStatsLoop } from './poolStats'
 
 const serverConfig = config.get('server')
 const {
@@ -34,6 +35,11 @@ async function createServer() {
       process.exit(1)
     })
   }
+
+  poolStatsLoop().catch((err) => {
+    logger.error(err)
+    process.exit(1)
+  })
 
   const allowedOrigins = corsEnabledFor ? corsEnabledFor.split(',').map(x => x.trim()) : []
   if (allowedOrigins.length > 0) {
