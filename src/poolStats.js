@@ -8,6 +8,7 @@ import type { DbApi } from 'icarus-backend' // eslint-disable-line
 const { logger } = config.get('server')
 const POOL_STATS_URL = 'https://js.adapools.org/pools.json'
 let poolStatsMap: Map<string, number> = new Map()
+let recommendedPools: Array<string> = []
 
 async function getNewStats(): Promise<Map<string, number> | null> {
   try {
@@ -23,7 +24,8 @@ async function getNewStats(): Promise<Map<string, number> | null> {
   }
 }
 
-export async function poolStatsLoop() {
+export async function poolStatsLoop(recommendedPoolsArr: Array<string>) {
+  recommendedPools = recommendedPoolsArr
   const token = process.env.SLACK_TOKEN
   const channelId = process.env.SLACK_CHANNEL
   const rtm = new RTMClient(token)
@@ -36,8 +38,19 @@ export async function poolStatsLoop() {
     const newStats = await getNewStats()
     if (newStats) {
       poolStatsMap = newStats
-    } else {
-      rtm.sendMessage(`${process.env.name || 'backend-service'}: Failed to fetch pool stats from ${POOL_STATS_URL}`, channelId)
+    }
+
+    const recommendedPoolsNotInStats = newStats ?
+      recommendedPools.filter(hash => !newStats.has(hash))
+      : []
+
+    if (!newStats || recommendedPoolsNotInStats.length) {
+      const errorMessage = !newStats
+        ? `Failed to fetch from ${POOL_STATS_URL}`
+        : `Recommended pool(s) '${recommendedPoolsNotInStats.toString()}' not present in stats`
+      logger.error(errorMessage)
+
+      rtm.sendMessage(`${process.env.name || 'backend-service'}: ${errorMessage}`, channelId)
         .then(() => {
           logger.debug('Message was sent without problems.')
         })
@@ -52,4 +65,8 @@ export async function poolStatsLoop() {
 
 export function getPoolStatsMap() {
   return poolStatsMap
+}
+
+export function getRecommendedPools() {
+  return recommendedPools
 }

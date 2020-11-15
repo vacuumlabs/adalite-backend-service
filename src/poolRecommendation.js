@@ -1,4 +1,9 @@
-import { getPoolStatsMap } from './poolStats'
+import { InternalServerError } from 'restify-errors'
+import { getPoolStatsMap, getRecommendedPools } from './poolStats'
+
+const SATURATION_AMOUNT = 62224967000000
+const OPTIMAL_AMOUNT = SATURATION_AMOUNT * 0.9
+const MIN_AMOUNT = SATURATION_AMOUNT * 0.15
 
 type ValidPoolHashStakePair = {
   hash: string,
@@ -6,29 +11,23 @@ type ValidPoolHashStakePair = {
 }
 
 export default (currPoolHash, stake) => {
-  const ADLTPoolsSet = new Set([
-    'ce19882fd62e79faa113fcaef93950a4f0a5913b20a0689911b6f62d',
-    '04c60c78417132a195cbb74975346462410f72612952a7c4ade7e438',
-    '92229dcf782ce8a82050fdeecb9334cc4d906c6eb66cdbdcea86fb5f',
-    'd785ff6a030ae9d521770c00f264a2aa423e928c85fc620b13d46eda',
-    '936f24e391afc0738c816ae1f1388957b977de3d0e065dc9ba38af8d',
-  ])
-
-  const saturationAmount = 62000000000000
-  const optimalAmount = 58000000000000
-  const minAmount = 9500000000000
-
+  const recommendedPools = getRecommendedPools()
   const poolStats = getPoolStatsMap()
-  const nonSaturatedPoolsWithSpace: Array<ValidPoolHashStakePair> = [...ADLTPoolsSet]
-    .filter(hash => !!poolStats.get(hash) && poolStats.get(hash) + stake < optimalAmount)
+
+  if (!recommendedPools.length) {
+    throw new InternalServerError('Recommended pools array empty. Recommendation turned off.')
+  }
+
+  const nonSaturatedPoolsWithSpace: Array<ValidPoolHashStakePair> = recommendedPools
+    .filter(hash => !!poolStats.get(hash) && poolStats.get(hash) + stake < OPTIMAL_AMOUNT)
     .map(hash => (
     // $FlowFixMe poolStats.get(hash) will always hold a value since its filtered beforehand
       { hash, stake: poolStats.get(hash) }
     ))
 
-  const isInOurPool = ADLTPoolsSet.has(currPoolHash)
+  const isInRecommendedPoolSet = recommendedPools.includes(currPoolHash)
   if (!nonSaturatedPoolsWithSpace.length) {
-    return { status: 'ADLTPoolsSaturated', isInOurPool }
+    return { status: 'NoUnsaturatedPoolAvailable', isInRecommendedPoolSet }
   }
 
   const emptiestPool = nonSaturatedPoolsWithSpace.reduce((acc, pool) => (
@@ -39,16 +38,20 @@ export default (currPoolHash, stake) => {
 
   const currLiveStake = poolStats.get(currPoolHash)
   let status = null
-  if (!currLiveStake) status = 'GivenPoolMissingFromStats'
-  if (!!currLiveStake && currLiveStake > saturationAmount) status = 'GivenPoolSaturated'
-  if (!!currLiveStake && currLiveStake < optimalAmount && currLiveStake > minAmount) status = 'GivenPoolOk'
+  if (!currLiveStake) {
+    status = 'GivenPoolMissingFromStats'
+  } else if (currLiveStake > SATURATION_AMOUNT) {
+    status = 'GivenPoolSaturated'
+  } else if (currLiveStake < OPTIMAL_AMOUNT && currLiveStake > MIN_AMOUNT) {
+    status = 'GivenPoolOk'
+  }
 
   console.log('fullest', fullestPool)
   console.log('emptiest', emptiestPool)
 
   return {
     status,
-    recommendedPoolHash: emptiestPool.stake < minAmount ? emptiestPool.hash : fullestPool.hash,
-    isInOurPool,
+    recommendedPoolHash: emptiestPool.stake < MIN_AMOUNT ? emptiestPool.hash : fullestPool.hash,
+    isInRecommendedPoolSet,
   }
 }
