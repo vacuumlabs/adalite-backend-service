@@ -42,8 +42,12 @@ export default (currPoolHash, stake) => {
     status = 'GivenPoolInvalid'
   } else if (currLiveStake > SATURATION_AMOUNT) {
     status = 'GivenPoolSaturated'
-  } else if (currLiveStake < OPTIMAL_AMOUNT && currLiveStake > MIN_AMOUNT) {
+  } else if (currLiveStake > OPTIMAL_AMOUNT) {
+    status = 'GivenPoolBeyondOptimum'
+  } else if (currLiveStake > MIN_AMOUNT) {
     status = 'GivenPoolOk'
+  } else if (currLiveStake > 0) {
+    status = 'GivenPoolUnderMinimum'
   }
 
   return {
