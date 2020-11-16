@@ -39,7 +39,7 @@ export default (currPoolHash, stake) => {
   const currLiveStake = poolStats.get(currPoolHash)
   let status = null
   if (!currLiveStake) {
-    status = 'GivenPoolMissingFromStats'
+    status = 'GivenPoolInvalid'
   } else if (currLiveStake > SATURATION_AMOUNT) {
     status = 'GivenPoolSaturated'
   } else if (currLiveStake < OPTIMAL_AMOUNT && currLiveStake > MIN_AMOUNT) {
