@@ -2,7 +2,7 @@ import { InternalServerError } from 'restify-errors'
 import { getPoolStatsMap, getRecommendedPools } from './poolStats'
 
 const SATURATION_AMOUNT = 62224967000000
-const OPTIMAL_AMOUNT = SATURATION_AMOUNT * 0.9
+const OPTIMAL_AMOUNT = 35000000000000
 const MIN_AMOUNT = SATURATION_AMOUNT * 0.15
 
 type ValidPoolHashStakePair = {
@@ -18,7 +18,7 @@ export default (currPoolHash, stake) => {
     throw new InternalServerError('Recommended pools array empty. Recommendation turned off.')
   }
 
-  const nonSaturatedPoolsWithSpace: Array<ValidPoolHashStakePair> = recommendedPools
+  const optimalPoolsWithSpace: Array<ValidPoolHashStakePair> = recommendedPools
     .filter(hash => !!poolStats.get(hash) && poolStats.get(hash) + stake < OPTIMAL_AMOUNT)
     .map(hash => (
     // $FlowFixMe poolStats.get(hash) will always hold a value since its filtered beforehand
@@ -26,14 +26,14 @@ export default (currPoolHash, stake) => {
     ))
 
   const isInRecommendedPoolSet = recommendedPools.includes(currPoolHash)
-  if (!nonSaturatedPoolsWithSpace.length) {
+  if (!optimalPoolsWithSpace.length) {
     return { status: 'NoUnsaturatedPoolAvailable', isInRecommendedPoolSet }
   }
 
-  const emptiestPool = nonSaturatedPoolsWithSpace.reduce((acc, pool) => (
+  const emptiestPool = optimalPoolsWithSpace.reduce((acc, pool) => (
     pool.stake < acc.stake ? pool : acc))
 
-  const fullestPool = nonSaturatedPoolsWithSpace.reduce((acc, pool) => (
+  const fullestPool = optimalPoolsWithSpace.reduce((acc, pool) => (
     pool.stake > acc.stake ? pool : acc))
 
   const currLiveStake = poolStats.get(currPoolHash)
@@ -45,9 +45,6 @@ export default (currPoolHash, stake) => {
   } else if (currLiveStake < OPTIMAL_AMOUNT && currLiveStake > MIN_AMOUNT) {
     status = 'GivenPoolOk'
   }
-
-  console.log('fullest', fullestPool)
-  console.log('emptiest', emptiestPool)
 
   return {
     status,
