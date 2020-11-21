@@ -19,10 +19,10 @@ export default (currPoolHash, stake) => {
   }
 
   const optimalPoolsWithSpace: Array<ValidPoolHashStakePair> = recommendedPools
-    .filter(hash => !!poolStats.get(hash) && poolStats.get(hash) + stake < OPTIMAL_AMOUNT)
+    .filter(hash => !!poolStats.get(hash) && poolStats.get(hash).liveStake + stake < OPTIMAL_AMOUNT)
     .map(hash => (
     // $FlowFixMe poolStats.get(hash) will always hold a value since its filtered beforehand
-      { hash, stake: poolStats.get(hash) }
+      { hash, stake: poolStats.get(hash).liveStake }
     ))
 
   const isInRecommendedPoolSet = recommendedPools.includes(currPoolHash)
@@ -36,7 +36,7 @@ export default (currPoolHash, stake) => {
   const fullestPool = optimalPoolsWithSpace.reduce((acc, pool) => (
     pool.stake > acc.stake ? pool : acc))
 
-  const currLiveStake = poolStats.get(currPoolHash)
+  const currLiveStake = !!poolStats.get(currPoolHash) && poolStats.get(currPoolHash).liveStake
   let status = null
   if (!currLiveStake) {
     status = 'GivenPoolInvalid'

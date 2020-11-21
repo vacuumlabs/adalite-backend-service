@@ -9,13 +9,40 @@ const { logger } = config.get('server')
 const POOL_STATS_URL = 'https://js.adapools.org/pools.json'
 let poolStatsMap: Map<string, number> = new Map()
 let recommendedPools: Array<string> = []
+type statsEntry = {
+  db_ticker: string,
+  db_name: string,
+  db_url: string,
+  tax_ratio: string,
+  tax_fix: string,
+  roa: string,
+  blocks_epoch: string,
+  blocks_lifetime: string,
+  pledge: string,
+  saturated: number,
+}
 
-async function getNewStats(): Promise<Map<string, number> | null> {
+async function getNewStats(): Promise<Map<string, Object> | null> {
   try {
     const { data: poolStats } = await axios.get(POOL_STATS_URL)
     const HashStakePairs = Object.entries(poolStats).map(
       // $FlowFixMe total_stake will be present in the result, if not, we set it as null
-      ([hash, entry]) => [hash, entry.total_stake ? parseInt(entry.total_stake, 10) : null],
+      ([hash, entry]: [string, statsEntry]) => [hash, entry.total_stake ?
+        {
+          liveStake: parseInt(entry.total_stake, 10),
+          ticker: entry.db_ticker,
+          name: entry.db_name,
+          url: entry.db_url,
+          margin: entry.tax_ratio,
+          fixedCost: entry.tax_fix,
+          roa: entry.roa,
+          epochBlocks: entry.blocks_epoch,
+          lifeTimeBlocks: entry.blocks_lifetime,
+          pledge: entry.pledge,
+          saturatedPercentage: entry.saturated,
+        }
+        : null,
+      ],
     )
     return new Map(HashStakePairs)
   } catch (error) {
