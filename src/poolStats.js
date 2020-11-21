@@ -33,7 +33,7 @@ async function getNewStats(): Promise<Map<string, Object> | null> {
           ticker: entry.db_ticker,
           name: entry.db_name,
           url: entry.db_url,
-          margin: entry.tax_ratio,
+          margin: parseFloat(entry.tax_ratio),
           fixedCost: entry.tax_fix,
           roa: entry.roa,
           epochBlocks: entry.blocks_epoch,

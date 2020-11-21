@@ -18,6 +18,7 @@ import type {
 import { _ } from 'lodash'
 import { wrapHashPrefix, unwrapHashPrefix, groupInputsOutputs } from './helpers'
 import getSuitablePool from './poolRecommendation'
+import { getPoolStatsMap } from './poolStats'
 
 const isValidAddress = (address) => true // eslint-disable-line no-unused-vars
 const withPrefix = route => `/api${route}`
@@ -349,6 +350,22 @@ const getStakeAddrDbId = async (dbApi: DbApi, stakeAddress: string) => {
 }
 
 /**
+ * Helper for appending pool metadata from poolStats to an object result
+ * @param {Object} row Result object, containing a key of poolHashKey value
+ * @param {string} poolHashKey Object key string value to refer to for pool hash inference
+ */
+const appendPoolMetadataToRow = (row: Object, poolHashKey: string): Object => {
+  const poolStats = getPoolStatsMap()
+  const poolData = row[poolHashKey] && poolStats.get(row[poolHashKey])
+  return poolData ?
+    {
+      ...row,
+      ...poolData,
+    }
+    : row
+}
+
+/**
  * Returns delegation, rewards and stake key registration for a given account
  * @param {*} db Database
  * @param {*} Server Server Config Object
@@ -358,19 +375,21 @@ const accountInfo = (dbApi: DbApi, { logger }: ServerConfig) => async (req: any)
   const { stakeAddress } = req.params
   const accountDbId = await getStakeAddrDbId(dbApi, stakeAddress)
   const delegation = accountDbId ? await poolInfoForAccountId(dbApi, accountDbId) : {}
+  const delegationWithMeta = appendPoolMetadataToRow(delegation, 'poolHash')
   const hasStakingKey = accountDbId ? await dbApi.hasActiveStakingKey(accountDbId) : false
   const rewards = accountDbId ? await dbApi.rewardsForAccountDbId(accountDbId) : '0'
   const currentEpoch = await dbApi.currentEpoch()
   const nextRewardDetails = accountDbId
     ? await nextRewardInfo(dbApi, accountDbId, currentEpoch)
     : getEmptyRewardsArray(currentEpoch)
+  const nextRewardDetailsWithMeta = nextRewardDetails.map(e => appendPoolMetadataToRow(e, 'poolHash'))
   logger.debug('[accountInfo] query finished')
   return {
     currentEpoch,
-    delegation,
+    delegation: delegationWithMeta,
     hasStakingKey,
     rewards,
-    nextRewardDetails,
+    nextRewardDetails: nextRewardDetailsWithMeta,
   }
 }
 
@@ -385,7 +404,8 @@ const delegationHistory = (dbApi: DbApi, { logger }: ServerConfig) => async (req
   const accountDbId = await getStakeAddrDbId(dbApi, stakeAddress)
   const delegations = accountDbId ? await dbApi.delegationHistory(accountDbId) : []
   logger.debug('[delegationHistory] query finished')
-  return delegations
+  const delegationsWithMeta: Array<Object> = delegations.map(e => appendPoolMetadataToRow(e, 'poolHash'))
+  return delegationsWithMeta
 }
 
 /**
@@ -415,7 +435,8 @@ const rewardHistory = (dbApi: DbApi, { logger }: ServerConfig) => async (req: an
   const itnReward = accountDbId ? await dbApi.itnReward(accountDbId) : null
   if (itnReward !== null) { rewards.push(itnReward) }
   logger.debug('[rewardHistory] query finished')
-  return rewards
+  const rewardsWithMeta: Array<Object> = rewards.map(e => appendPoolMetadataToRow(e, 'poolHash'))
+  return rewardsWithMeta
 }
 
 /**
@@ -444,7 +465,7 @@ const poolRecommendation = (dbApi: DbApi, { logger }: ServerConfig) => async (re
   }
   const recommendedPool = getSuitablePool(poolHash, stakeInt)
   logger.debug('[poolRecommendation] query finished')
-  return recommendedPool
+  return appendPoolMetadataToRow(recommendedPool, 'recommendedPoolHash')
 }
 
 
