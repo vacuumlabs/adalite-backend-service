@@ -68,7 +68,7 @@ services:
 
   cardano-db-sync:
     container_name: ${COMPOSE_PROJECT_NAME}-cardano-db-sync
-    image: inputoutput/cardano-db-sync:6.0.0
+    image: refi93/cardano-db-sync:epoch-boundary-fix
     environment:
       - NETWORK=${NETWORK}
       - POSTGRES_HOST=postgres
