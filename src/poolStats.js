@@ -32,7 +32,7 @@ async function getNewStats(): Promise<Map<string, Object> | null> {
           liveStake: parseInt(entry.total_stake, 10),
           ticker: entry.db_ticker,
           name: entry.db_name,
-          url: entry.db_url,
+          homepage: entry.db_url,
           margin: parseFloat(entry.tax_ratio),
           fixedCost: entry.tax_fix,
           roa: entry.roa,
