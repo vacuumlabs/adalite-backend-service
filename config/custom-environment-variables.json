@@ -13,6 +13,7 @@
   "server": {
     "port": "PORT",
     "txSubmitApiUrl": "SUBMIT_API_URL",
-    "corsEnabledFor": "CORS_ENABLED_FOR"
+    "corsEnabledFor": "CORS_ENABLED_FOR",
+    "recommendedPools": "RECOMMENDED_POOLS"
   }
 }

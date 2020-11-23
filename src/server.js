@@ -13,10 +13,16 @@ import createDB from './db'
 import configCleanup from './cleanup'
 import { healthcheckLoop } from './healthcheck'
 import responseGuard from './middleware/response-guard'
+import { poolStatsLoop } from './poolStats'
 
 const serverConfig = config.get('server')
 const {
-  logger, txSubmitApiUrl, disableHealthcheck, corsEnabledFor, allowCredentials,
+  logger,
+  txSubmitApiUrl,
+  disableHealthcheck,
+  corsEnabledFor,
+  allowCredentials,
+  recommendedPools,
 } = serverConfig
 
 async function createServer() {
@@ -33,6 +39,17 @@ async function createServer() {
       logger.error(err)
       process.exit(1)
     })
+  }
+
+  const recommendedPoolsArray = recommendedPools ?
+    recommendedPools.split(',').map(x => x.trim()) : null
+  if (recommendedPoolsArray && recommendedPoolsArray.length) {
+    poolStatsLoop(recommendedPoolsArray).catch((err) => {
+      logger.error(err)
+      process.exit(1)
+    })
+  } else {
+    logger.info('No recommended pools set up. Recommendation turned off.')
   }
 
   const allowedOrigins = corsEnabledFor ? corsEnabledFor.split(',').map(x => x.trim()) : []
