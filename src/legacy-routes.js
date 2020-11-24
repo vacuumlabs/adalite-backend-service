@@ -459,9 +459,12 @@ const poolRecommendation = (dbApi: DbApi, { logger }: ServerConfig) => async (re
   let stakeInt: number = 0
   try {
     stakeInt = parseInt(stake, 10)
+    if (stakeInt < 0) {
+      throw new Error('Negative stake supplied.')
+    }
   } catch (err) {
-    logger.error('[poolRecommendation] Invalid arguments')
-    throw new BadRequestError('Staking amount must be a valid lovelace number')
+    logger.error(`[poolRecommendation] Invalid arguments. Error: ${err.message}`)
+    throw new BadRequestError('Staking amount must be a valid positive lovelace integer')
   }
   const recommendedPool = getSuitablePool(poolHash, stakeInt)
   logger.debug('[poolRecommendation] query finished')

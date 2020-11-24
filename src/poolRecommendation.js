@@ -25,17 +25,6 @@ export default (currPoolHash, stake) => {
       { hash, stake: poolStats.get(hash).liveStake }
     ))
 
-  const isInRecommendedPoolSet = recommendedPools.includes(currPoolHash)
-  if (!optimalPoolsWithSpace.length) {
-    return { status: 'NoUnsaturatedPoolAvailable', isInRecommendedPoolSet }
-  }
-
-  const emptiestPool = optimalPoolsWithSpace.reduce((acc, pool) => (
-    pool.stake < acc.stake ? pool : acc))
-
-  const fullestPool = optimalPoolsWithSpace.reduce((acc, pool) => (
-    pool.stake > acc.stake ? pool : acc))
-
   const currLiveStake = !!poolStats.get(currPoolHash) && poolStats.get(currPoolHash).liveStake
   let status = null
   if (!currLiveStake) {
@@ -50,9 +39,20 @@ export default (currPoolHash, stake) => {
     status = 'GivenPoolUnderMinimum'
   }
 
+  let recommendedPoolHash
+  if (!optimalPoolsWithSpace.length) {
+    recommendedPoolHash = null
+  } else {
+    const emptiestPool = optimalPoolsWithSpace.reduce((acc, pool) => (
+      pool.stake < acc.stake ? pool : acc))
+    const fullestPool = optimalPoolsWithSpace.reduce((acc, pool) => (
+      pool.stake > acc.stake ? pool : acc))
+    recommendedPoolHash = emptiestPool.stake < MIN_AMOUNT ? emptiestPool.hash : fullestPool.hash
+  }
+
   return {
     status,
-    recommendedPoolHash: emptiestPool.stake < MIN_AMOUNT ? emptiestPool.hash : fullestPool.hash,
-    isInRecommendedPoolSet,
+    recommendedPoolHash,
+    isInRecommendedPoolSet: recommendedPools.includes(currPoolHash),
   }
 }
