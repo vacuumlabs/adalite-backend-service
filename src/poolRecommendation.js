@@ -10,7 +10,7 @@ type ValidPoolHashStakePair = {
   stake: number,
 }
 
-export default (currPoolHash, stake) => {
+export default (currPoolHash, accountStake) => {
   const recommendedPools = getRecommendedPools()
   const poolStats = getPoolStatsMap()
 
@@ -18,12 +18,15 @@ export default (currPoolHash, stake) => {
     throw new InternalServerError('Recommended pools array empty. Recommendation turned off.')
   }
 
-  const optimalPoolsWithSpace: Array<ValidPoolHashStakePair> = recommendedPools
-    .filter(hash => !!poolStats.get(hash) && poolStats.get(hash).liveStake + stake < OPTIMAL_AMOUNT)
+  const unsaturatedPoolsWithSpace: Array<ValidPoolHashStakePair> = recommendedPools
+    .filter(hash =>
+      !!poolStats.get(hash) && poolStats.get(hash).liveStake + accountStake < SATURATION_AMOUNT)
     .map(hash => (
     // $FlowFixMe poolStats.get(hash) will always hold a value since its filtered beforehand
       { hash, stake: poolStats.get(hash).liveStake }
     ))
+  const optimalPoolsWithSpace = unsaturatedPoolsWithSpace
+    .filter(({ stake }) => stake + accountStake < OPTIMAL_AMOUNT)
 
   const currLiveStake = !!poolStats.get(currPoolHash) && poolStats.get(currPoolHash).liveStake
   let status = null
@@ -40,14 +43,18 @@ export default (currPoolHash, stake) => {
   }
 
   let recommendedPoolHash
-  if (!optimalPoolsWithSpace.length) {
+  if (!unsaturatedPoolsWithSpace.length) {
     recommendedPoolHash = null
   } else {
-    const emptiestPool = optimalPoolsWithSpace.reduce((acc, pool) => (
-      pool.stake < acc.stake ? pool : acc))
-    const fullestPool = optimalPoolsWithSpace.reduce((acc, pool) => (
-      pool.stake > acc.stake ? pool : acc))
-    recommendedPoolHash = emptiestPool.stake < MIN_AMOUNT ? emptiestPool.hash : fullestPool.hash
+    const emptiestPool = unsaturatedPoolsWithSpace
+      .reduce((acc, pool) => (pool.stake < acc.stake ? pool : acc))
+    const fullestOptimalPool = optimalPoolsWithSpace.length
+      ? optimalPoolsWithSpace.reduce((acc, pool) => (pool.stake > acc.stake ? pool : acc))
+      : null
+
+    recommendedPoolHash = emptiestPool.stake < MIN_AMOUNT || !fullestOptimalPool
+      ? emptiestPool.hash
+      : fullestOptimalPool.hash
   }
 
   return {
