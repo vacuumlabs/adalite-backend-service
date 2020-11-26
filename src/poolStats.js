@@ -7,6 +7,7 @@ import type { DbApi } from 'icarus-backend' // eslint-disable-line
 
 const { logger } = config.get('server')
 const POOL_STATS_URL = 'https://js.adapools.org/pools.json'
+const INVALID_STATS_SUCCESSION_LIMIT = 3
 let poolStatsMap: Map<string, number> = new Map()
 let recommendedPools: Array<string> = []
 type statsEntry = {
@@ -79,7 +80,7 @@ export async function poolStatsLoop(recommendedPoolsArr: Array<string>) {
         : `Recommended pool(s) '${recommendedPoolsNotInStats.toString()}' not present in stats`
       logger.error(errorMessage)
 
-      if (invalidStatsCnt >= 3) {
+      if (invalidStatsCnt >= INVALID_STATS_SUCCESSION_LIMIT) {
         rtm.sendMessage(`${process.env.name || 'backend-service'}: ${errorMessage}`, channelId)
           .then(() => {
             logger.debug('Message was sent without problems.')
