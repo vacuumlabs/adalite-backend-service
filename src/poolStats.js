@@ -60,30 +60,35 @@ export async function poolStatsLoop(recommendedPoolsArr: Array<string>) {
     rtm.start()
   }
 
+  let invalidStatsCnt = 0
   /* eslint-disable no-await-in-loop */
   while (true) { // eslint-disable-line
     const newStats = await getNewStats()
-    if (newStats) {
-      poolStatsMap = newStats
-    }
-
     const recommendedPoolsNotInStats = newStats ?
       recommendedPools.filter(hash => !newStats.has(hash))
       : []
 
+    if (newStats && recommendedPoolsNotInStats.length < recommendedPools.length) {
+      poolStatsMap = newStats
+    } // keep old stats if they're valid and have at least one of our pools
+
     if (!newStats || recommendedPoolsNotInStats.length) {
+      invalidStatsCnt += 1
       const errorMessage = !newStats
         ? `Failed to fetch from ${POOL_STATS_URL}`
         : `Recommended pool(s) '${recommendedPoolsNotInStats.toString()}' not present in stats`
       logger.error(errorMessage)
 
-      rtm.sendMessage(`${process.env.name || 'backend-service'}: ${errorMessage}`, channelId)
-        .then(() => {
-          logger.debug('Message was sent without problems.')
-        })
-        .catch((e) => {
-          logger.error(`Error sending slack message: ${e}`)
-        })
+      if (invalidStatsCnt >= 3) {
+        rtm.sendMessage(`${process.env.name || 'backend-service'}: ${errorMessage}`, channelId)
+          .then(() => {
+            logger.debug('Message was sent without problems.')
+          })
+          .catch((e) => {
+            logger.error(`Error sending slack message: ${e}`)
+          })
+        invalidStatsCnt = 0
+      }
     }
 
     await delay(60000)
