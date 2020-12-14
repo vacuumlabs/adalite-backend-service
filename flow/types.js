@@ -77,7 +77,7 @@ declare module 'icarus-backend' {
   };
 
   declare type ImporterApi = {
-    sendTx: (tx: Buffer) => AxiosPromise<ImporterResponse>
+    sendTx: (tx: string) => AxiosPromise<ImporterResponse>
   };
 
   declare type ImporterResponse = {
