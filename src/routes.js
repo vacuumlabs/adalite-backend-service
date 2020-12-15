@@ -187,7 +187,7 @@ const signedTransaction = (
   let response
   try {
     const tx: string = req.body.signedTx
-    response = await importerApi.sendTx(Buffer.from(tx, 'base64').toString('hex'))
+    response = await importerApi.sendTx(Buffer.from(tx, 'base64'))
     return response.data
   } catch (err) {
     if (err.response && err.response.status < 500 && err.response.data) {
