@@ -58,7 +58,7 @@ async function txTest(): Promise<boolean> {
   try {
     // eslint-disable-next-line max-len
     const txBody = '83a40081825820dde38f7401d3d85371d9efa944b78cee79e44635f9b2c108b512320d75fae40a00018182583901f3db2225703e4cfbe2227772bdf057f9829449f18ac81e250ceb01ca0a84430507e150f0a06109dc3a7b1956b7a0586ae9078a55ef0e0b031a000fc50c021a0002ac09031a00989680a100818258209c253c89bbe32d0b11c2abfa464e75627af25beb90c15adbd9f6b62160dfa838584002bfd17db30a1cdfac05c16b56d03f3594628dfc9e614debbfa50435d4af6af1717bc3f90b8b305e3ca23dcbf333d2863277f9196bd1536b7d1b74509c057702f6'
-    response = await importer.sendTx(txBody)
+    response = await importer.sendTx(Buffer.from(txBody, 'hex'))
   } catch (err) {
     if (err.response && err.response.status === 400) {
       return true
