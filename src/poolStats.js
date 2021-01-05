@@ -8,7 +8,7 @@ import type { DbApi } from 'icarus-backend' // eslint-disable-line
 const { logger } = config.get('server')
 const POOL_STATS_URL = 'https://js.adapools.org/pools.json'
 const INVALID_STATS_SUCCESSION_LIMIT = 3
-let poolStatsMap: Map<string, number> = new Map()
+let poolStatsMap: Map<string, Object> = new Map()
 let recommendedPools: Array<string> = []
 type statsEntry = {
   db_ticker: string,
