@@ -234,6 +234,26 @@ const bulkAddressSummary = (dbApi: any, { logger, apiConfig }: ServerConfig) => 
 }
 
 /**
+ * Helper for appending pool metadata from poolStats to pools
+ * @param {Array} pools Array of pools from db
+ */
+const appendPoolMetadataToPools = (pools) => {
+  const poolStats = getPoolStatsMap()
+  const poolsWithMeta = pools.map((pool) => {
+    const poolData = pool.poolHash && poolStats.get(pool.poolHash)
+    return poolData ?
+      {
+        ...pool,
+        name: poolData.name,
+        ticker: poolData.ticker,
+        homepage: poolData.homepage,
+      }
+      : pool
+  })
+  return poolsWithMeta
+}
+
+/**
  * Gets all valid stake pools and their information as map
  * @param {*} db Database
  * @param {*} Server Server Config Object
@@ -241,7 +261,8 @@ const bulkAddressSummary = (dbApi: any, { logger, apiConfig }: ServerConfig) => 
 const stakePools = (dbApi: DbApi, { logger }: ServerConfig) => async () => {
   logger.debug('[stakePools] query started')
   const result = await dbApi.stakePoolsInfo()
-  const poolsMappedByHash = _.chain(result)
+  const poolsWithMeta = appendPoolMetadataToPools(result)
+  const poolsMappedByHash = _.chain(poolsWithMeta)
     .keyBy('poolHash')
     .mapValues(pool => _.omit(pool, 'poolHash'))
     .value()
