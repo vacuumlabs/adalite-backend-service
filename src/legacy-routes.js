@@ -455,6 +455,8 @@ const rewardHistory = (dbApi: DbApi, { logger }: ServerConfig) => async (req: an
   const rewards = accountDbId ? await dbApi.mainnetRewardHistory(accountDbId) : []
   const itnReward = accountDbId ? await dbApi.itnReward(accountDbId) : null
   if (itnReward !== null) { rewards.push(itnReward) }
+  const treasuryRewards = accountDbId ? await dbApi.treasuryRewards(accountDbId) : null
+  if (treasuryRewards !== null) { rewards.push(...treasuryRewards) }
   logger.debug('[rewardHistory] query finished')
   const rewardsWithMeta: Array<Object> = rewards.map(e => appendPoolMetadataToRow(e, 'poolHash'))
   return rewardsWithMeta

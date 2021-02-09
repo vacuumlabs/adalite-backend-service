@@ -363,6 +363,8 @@ const rewardsForAccountDbId = (db: Pool) => async (accountDbId: number): Promise
             SELECT amount FROM reward WHERE addr_id=$1
             UNION ALL
             SELECT amount FROM reserve WHERE addr_id=$1
+            UNION ALL
+            SELECT amount FROM treasury WHERE addr_id=$1
           ) rewards
         ) - (
           SELECT COALESCE(SUM(amount), 0) FROM withdrawal WHERE addr_id=$1
@@ -475,7 +477,7 @@ const mainnetRewardHistory = (db: Pool) => async (accountDbId: number)
 : Promise<TypedResultSet<RewardHistoryDbResult>> =>
   (db.query({
     text: `SELECT r.epoch_no::INTEGER as "forDelegationInEpoch", block.epoch_no as "epochNo",
-        block.time, r.amount, RIGHT(ph.hash_raw::text, -2) as "poolHash"
+        block.time, r.amount, RIGHT(ph.hash_raw::text, -2) as "poolHash", 'REGULAR' as "rewardType"
       FROM reward r
       LEFT JOIN block ON r.block_id=block.id
       LEFT JOIN pool_hash ph ON r.pool_id=ph.id
@@ -485,6 +487,20 @@ const mainnetRewardHistory = (db: Pool) => async (accountDbId: number)
   }): any)
 
 /**
+ * Helper which transforms treasury or reserve rewards into regular reward format
+ */
+const toRegularRewardFormat = (
+  rows: Array<any>,
+): Array<RewardHistoryDbResult> | null => (rows.length > 0 ?
+  rows.map((row) => ({
+    ...row,
+    forDelegationInEpoch: null,
+    poolHash: null,
+  }))
+  : null
+)
+
+/**
  * Gets the itn reward entry for stake address db id if it exists
  * @param {Db Object} db
  * @param {number} accountDbId
@@ -492,7 +508,7 @@ const mainnetRewardHistory = (db: Pool) => async (accountDbId: number)
 const itnReward = (db: Pool) => async (accountDbId: number)
 : Promise<RewardHistoryDbResult | null> => {
   const rewardDbResult = await (db.query({
-    text: `SELECT block.epoch_no as "epochNo", block.time, r.amount
+    text: `SELECT block.epoch_no as "epochNo", block.time, r.amount, 'ITN' as "rewardType"
       FROM reserve r
       LEFT JOIN tx on r.tx_id=tx.id
       LEFT JOIN block on tx.block_id=block.id
@@ -500,11 +516,27 @@ const itnReward = (db: Pool) => async (accountDbId: number)
     values: [accountDbId],
   }): any)
 
-  return rewardDbResult.rows.length > 0 ? {
-    ...rewardDbResult.rows[0],
-    forDelegationInEpoch: null,
-    poolHash: null,
-  } : null
+  const formattedRewards = toRegularRewardFormat(rewardDbResult.rows)
+  return formattedRewards === null ? null : formattedRewards[0]
+}
+
+/**
+ * Gets the treasury reward entries for stake address db id if it exists
+ * @param {Db Object} db
+ * @param {number} accountDbId
+ */
+const treasuryRewards = (db: Pool) => async (accountDbId: number)
+: Promise<Array<RewardHistoryDbResult> | null> => {
+  const rewardDbResult = await (db.query({
+    text: `SELECT block.epoch_no as "epochNo", block.time, t.amount, 'TREASURY' as "rewardType"
+      FROM treasury t
+      LEFT JOIN tx on t.tx_id=tx.id
+      LEFT JOIN block on tx.block_id=block.id
+      WHERE t.addr_id=$1`,
+    values: [accountDbId],
+  }): any)
+
+  return toRegularRewardFormat(rewardDbResult.rows)
 }
 
 export default (db: Pool): DbApi => ({
@@ -536,4 +568,5 @@ export default (db: Pool): DbApi => ({
   stakeRegistrationHistory: extractRows(stakeRegistrationHistory(db)),
   mainnetRewardHistory: extractRows(mainnetRewardHistory(db)),
   itnReward: itnReward(db),
+  treasuryRewards: treasuryRewards(db),
 })

@@ -72,6 +72,7 @@ declare module 'icarus-backend' {
     withdrawalHistory: (accountDbId: number) => Promise<Array<WithdrawalHistoryDbResult>>,
     mainnetRewardHistory: (accountDbId: number) => Promise<Array<RewardHistoryDbResult>>,
     itnReward: (accountDbId: number) => Promise<RewardHistoryDbResult | null>,
+    treasuryRewards: (accountDbId: number) => Promise<Array<RewardHistoryDbResult> | null>,
     stakeRegistrationHistory: (accountDbId: number) =>
       Promise<Array<StakeRegistrationHistoryDbResult>>,
   };
@@ -234,12 +235,14 @@ declare module 'icarus-backend' {
     txHash: string,
   }
 
+  declare type RewardType = 'ITN' | 'REGULAR' | 'TREASURY'
   declare type RewardHistoryDbResult = {
     forDelegationInEpoch: number,
     epochNo: number,
     time: Date,
     amount: string,
     poolHash: string,
+    rewardType: RewardType,
   }
 
   declare type StakeRegistrationHistoryDbResult = {
