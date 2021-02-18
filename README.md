@@ -1,5 +1,5 @@
 # AdaLite Backend Service
-
+ 
 [![CircleCI](https://circleci.com/gh/vacuumlabs/adalite-backend-service.svg?style=svg)](https://circleci.com/gh/vacuumlabs/adalite-backend-service)
 
 AdaLite Backend Service is based on Project Icarus by IOHK and used by the [AdaLite](https://github.com/vacuumlabs/adalite) wallet.
