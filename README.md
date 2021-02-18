@@ -1,4 +1,9 @@
+# Deprecation notice
+
+*This repo is no longer maintained and further development has been moved to a private repository. In case of interest please contact us at adalite@vacuumlabs.com* 
+
 # AdaLite Backend Service
+
 
 [![CircleCI](https://circleci.com/gh/vacuumlabs/adalite-backend-service.svg?style=svg)](https://circleci.com/gh/vacuumlabs/adalite-backend-service)
 
