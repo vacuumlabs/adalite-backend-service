@@ -1,6 +1,8 @@
 # Deprecation notice
 
-*This repo is no longer maintained and further development has been moved to a private repository. In case of interest please contact us at adalite@vacuumlabs.com* 
+*This repo is no longer maintained and further development has been moved to a private repository. In case of interest please contact us at adalite@vacuumlabs.com*
+
+Also please consider using [cardano-graphql](https://github.com/input-output-hk/cardano-graphql) or [cardano-rosetta](https://github.com/input-output-hk/cardano-rosetta) instead. 
 
 # AdaLite Backend Service
 
